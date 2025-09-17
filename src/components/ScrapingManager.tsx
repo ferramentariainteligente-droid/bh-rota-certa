@@ -5,6 +5,8 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { 
@@ -16,7 +18,9 @@ import {
   Activity,
   Download,
   Play,
-  Pause
+  Pause,
+  TestTube,
+  ExternalLink
 } from 'lucide-react';
 
 interface ScrapingSource {
@@ -66,6 +70,9 @@ export const ScrapingManager = () => {
   const [isRunning, setIsRunning] = useState(false);
   const [currentExecution, setCurrentExecution] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('sources');
+  const [testUrl, setTestUrl] = useState('https://movemetropolitano.com.br/4211-terminal-sao-benedito-circular-conjunto-cristina');
+  const [testResult, setTestResult] = useState<any>(null);
+  const [isTesting, setIsTesting] = useState(false);
 
   // Load initial data
   useEffect(() => {
@@ -155,6 +162,66 @@ export const ScrapingManager = () => {
         description: "Falha na conexão: " + error.message,
         variant: "destructive"
       });
+    }
+  };
+
+  const testUrlScraping = async () => {
+    if (!testUrl.trim()) {
+      toast({
+        title: "URL Necessária",
+        description: "Por favor, insira uma URL para testar",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsTesting(true);
+    setTestResult(null);
+
+    try {
+      console.log('Testing URL scraping:', testUrl);
+      
+      const response = await supabase.functions.invoke('test-scrape', {
+        body: { test_url: testUrl }
+      });
+
+      console.log('Test scrape response:', response);
+
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+
+      const result = response.data;
+      setTestResult(result);
+
+      if (result.success) {
+        toast({
+          title: "Teste Bem-sucedido! 🎉",
+          description: `Extraídos ${result.test_result.schedules_found} tipos de horário`,
+          duration: 5000
+        });
+      } else {
+        toast({
+          title: "Teste Falhou",
+          description: result.message,
+          variant: "destructive"
+        });
+      }
+
+      // Reload logs to see the test entry
+      setTimeout(() => {
+        loadRecentLogs();
+      }, 1000);
+
+    } catch (error) {
+      console.error('URL scraping test failed:', error);
+      toast({
+        title: "Erro no Teste",
+        description: "Falha ao testar scraping: " + error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setIsTesting(false);
     }
   };
 
@@ -383,8 +450,9 @@ export const ScrapingManager = () => {
       </Card>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="sources">Fontes de Scraping</TabsTrigger>
+          <TabsTrigger value="test">Teste de URL</TabsTrigger>
           <TabsTrigger value="logs">Logs de Execução</TabsTrigger>
           <TabsTrigger value="results">Linhas Descobertas</TabsTrigger>
         </TabsList>
@@ -424,6 +492,156 @@ export const ScrapingManager = () => {
                     </div>
                   </div>
                 ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="test">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <TestTube className="w-5 h-5" />
+                Teste de Scraping de URL
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="test-url">URL para Teste</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="test-url"
+                    value={testUrl}
+                    onChange={(e) => setTestUrl(e.target.value)}
+                    placeholder="https://movemetropolitano.com.br/..."
+                    className="flex-1"
+                  />
+                  <Button
+                    onClick={testUrlScraping}
+                    disabled={isTesting || !testUrl.trim()}
+                    className="flex items-center gap-2"
+                  >
+                    {isTesting ? (
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <TestTube className="w-4 h-4" />
+                    )}
+                    {isTesting ? 'Testando...' : 'Testar Scraping'}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => window.open(testUrl, '_blank')}
+                    disabled={!testUrl.trim()}
+                    className="flex items-center gap-2"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    Abrir
+                  </Button>
+                </div>
+              </div>
+
+              {testResult && (
+                <div className="space-y-4">
+                  <div className="border rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      {testResult.success ? (
+                        <CheckCircle2 className="w-5 h-5 text-green-600" />
+                      ) : (
+                        <AlertCircle className="w-5 h-5 text-red-600" />
+                      )}
+                      <h3 className="font-semibold">
+                        {testResult.success ? 'Teste Bem-sucedido' : 'Teste Falhou'}
+                      </h3>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                      <div className="bg-muted/30 p-3 rounded">
+                        <div className="text-lg font-bold text-blue-600">
+                          {testResult.test_result?.schedules_found || 0}
+                        </div>
+                        <div className="text-sm text-muted-foreground">Tipos de Horário</div>
+                      </div>
+                      <div className="bg-muted/30 p-3 rounded">
+                        <div className="text-lg font-bold text-purple-600">
+                          {testResult.test_result?.schedule_types?.reduce((acc, type) => acc + type.times_count, 0) || 0}
+                        </div>
+                        <div className="text-sm text-muted-foreground">Total de Horários</div>
+                      </div>
+                      <div className="bg-muted/30 p-3 rounded">
+                        <div className="text-lg font-bold text-green-600">
+                          {testResult.test_result?.metadata?.sections_found || 0}
+                        </div>
+                        <div className="text-sm text-muted-foreground">Seções Encontradas</div>
+                      </div>
+                    </div>
+
+                    {testResult.success && testResult.test_result?.schedule_types?.length > 0 && (
+                      <div className="space-y-2">
+                        <h4 className="font-medium">Tipos de Horário Detectados:</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                          {testResult.test_result.schedule_types.map((type, index) => (
+                            <div key={index} className="bg-background border rounded p-2 flex justify-between items-center">
+                              <span className="text-sm font-medium">{type.type}</span>
+                              <Badge variant="secondary">{type.times_count} horários</Badge>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {testResult.detailed_schedules && testResult.detailed_schedules.length > 0 && (
+                      <div className="space-y-2 mt-4">
+                        <h4 className="font-medium">Horários Completos:</h4>
+                        <div className="max-h-96 overflow-y-auto space-y-3">
+                          {testResult.detailed_schedules.map((schedule, index) => (
+                            <div key={index} className="bg-background border rounded p-3">
+                              <div className="font-medium mb-2">{schedule.tipo}</div>
+                              <div className="flex flex-wrap gap-1">
+                                {schedule.horarios.slice(0, 20).map((horario, hIndex) => (
+                                  <span key={hIndex} className="px-2 py-1 bg-muted text-xs rounded">
+                                    {horario}
+                                  </span>
+                                ))}
+                                {schedule.horarios.length > 20 && (
+                                  <span className="px-2 py-1 bg-muted text-xs rounded">
+                                    +{schedule.horarios.length - 20} mais
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {testResult.test_result?.error && (
+                      <Alert className="mt-4">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertDescription>
+                          <strong>Erro:</strong> {testResult.test_result.error}
+                        </AlertDescription>
+                      </Alert>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <div className="bg-muted/30 p-4 rounded-lg">
+                <h4 className="font-medium mb-2">💡 URLs de Exemplo para Teste:</h4>
+                <div className="space-y-1 text-sm">
+                  <div 
+                    className="cursor-pointer hover:text-primary"
+                    onClick={() => setTestUrl('https://movemetropolitano.com.br/4211-terminal-sao-benedito-circular-conjunto-cristina')}
+                  >
+                    • https://movemetropolitano.com.br/4211-terminal-sao-benedito-circular-conjunto-cristina
+                  </div>
+                  <div 
+                    className="cursor-pointer hover:text-primary"
+                    onClick={() => setTestUrl('https://movemetropolitano.com.br/5889-vila-maria-terminal-vilarinho')}
+                  >
+                    • https://movemetropolitano.com.br/5889-vila-maria-terminal-vilarinho
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
