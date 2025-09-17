@@ -6,41 +6,29 @@ const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-// Bus lines data (static copy to avoid external dependency)
-const BUS_LINES_SAMPLE = [
-  {
-    "url": "https://movemetropolitano.com.br/4211-terminal-sao-benedito-circular-conjunto-cristina",
-    "linha": "4211 Terminal São Benedito / Circular Conjunto Cristina"
-  },
-  {
-    "url": "https://movemetropolitano.com.br/5889-vila-maria-terminal-vilarinho", 
-    "linha": "5889 Vila Maria / Terminal Vilarinho"
-  },
-  {
-    "url": "https://movemetropolitano.com.br/402h-terminal-sao-gabriel-hospitais",
-    "linha": "402H Terminal São Gabriel / Hospitais"
-  },
-  {
-    "url": "https://movemetropolitano.com.br/1303-betim-bh-via-terezopolis",
-    "linha": "1303 Betim / BH Via Terezópolis"
-  },
-  {
-    "url": "https://movemetropolitano.com.br/5104-pampulha-centro-via-antonio-carlos", 
-    "linha": "5104 Pampulha / Centro Via Antônio Carlos"
-  },
-  {
-    "url": "https://movemetropolitano.com.br/9202-venda-nova-centro",
-    "linha": "9202 Venda Nova / Centro"
-  },
-  {
-    "url": "https://movemetropolitano.com.br/6001-contagem-centro-bh",
-    "linha": "6001 Contagem / Centro BH"
-  },
-  {
-    "url": "https://movemetropolitano.com.br/3001-nova-lima-centro-bh",
-    "linha": "3001 Nova Lima / Centro BH"
+// Function to get bus lines from database
+async function getBusLinesFromDatabase(startIndex: number, batchSize: number) {
+  try {
+    const { data: busLines, error } = await supabase
+      .from('bus_lines')
+      .select('official_url, full_title')
+      .not('official_url', 'is', null)
+      .range(startIndex, startIndex + batchSize - 1);
+
+    if (error) {
+      console.error('Error fetching bus lines:', error);
+      return [];
+    }
+
+    return busLines.map(line => ({
+      url: line.official_url,
+      linha: line.full_title
+    }));
+  } catch (error) {
+    console.error('Error in getBusLinesFromDatabase:', error);
+    return [];
   }
-];
+}
 
 async function scrapeBusSchedules(url: string): Promise<{
   success: boolean;
@@ -243,8 +231,31 @@ Deno.serve(async (req) => {
       console.error('Start log error:', startLogError);
     }
 
-    // Process lines in batches
-    const linesToProcess = BUS_LINES_SAMPLE.slice(start_index, start_index + batch_size);
+    // Get bus lines from database
+    const linesToProcess = await getBusLinesFromDatabase(start_index, batch_size);
+    
+    if (linesToProcess.length === 0) {
+      console.log('No more lines to process');
+      return new Response(
+        JSON.stringify({
+          success: true,
+          execution_id: executionId,
+          statistics: {
+            batch_size,
+            start_index,
+            total_lines_processed: 0,
+            total_lines_updated: 0,
+            total_lines_failed: 0,
+            next_start_index: start_index
+          },
+          message: 'No more lines to process'
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200
+        }
+      );
+    }
     
     let totalProcessed = 0;
     let totalSuccessful = 0;

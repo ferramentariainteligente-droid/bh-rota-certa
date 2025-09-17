@@ -66,7 +66,13 @@ export const AllLinesProcessor = () => {
     setProgress(0);
 
     try {
-      const totalLinesToProcess = 8; // Total estimated lines
+      // Get total count from database
+      const { data: countData, error: countError } = await supabase
+        .from('bus_lines')
+        .select('*', { count: 'exact', head: true })
+        .not('official_url', 'is', null);
+
+      const totalLinesToProcess = countData?.length || countError ? 50 : (countData?.length || 50); // Fallback to 50 if error
       const batchSize = 4; // Process 4 lines at a time
       let currentIndex = 0;
       let accumulatedStats = {
@@ -78,7 +84,7 @@ export const AllLinesProcessor = () => {
 
       toast({
         title: "Processamento Iniciado",
-        description: "Iniciando categorização de todas as linhas de ônibus...",
+        description: `Iniciando categorização de ${totalLinesToProcess} linhas de ônibus...`,
       });
 
       while (currentIndex < totalLinesToProcess) {
@@ -109,8 +115,8 @@ export const AllLinesProcessor = () => {
 
         currentIndex = batchStats.next_start_index;
         
-        // Break if we've processed all available lines
-        if (batchStats.total_lines_processed < batchSize) {
+        // Break if we've processed all available lines or no lines were returned
+        if (batchStats.total_lines_processed === 0 || batchStats.total_lines_processed < batchSize) {
           break;
         }
 
