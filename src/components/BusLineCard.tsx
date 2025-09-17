@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BusDataExtractor } from "@/services/BusDataExtractor";
+import { ScheduleAlert } from "@/components/ScheduleAlert";
 
 interface ExtractedSchedule {
   tipo: string;
@@ -135,10 +136,17 @@ export const BusLineCard = ({ line }: BusLineCardProps) => {
               <Badge variant="secondary" className="text-lg font-bold px-3 py-1">
                 {number}
               </Badge>
-              <Badge variant="outline" className="text-blue-600 border-blue-200 bg-blue-50">
-                <Info className="h-3 w-3 mr-1" />
-                {line.schedulesDetailed ? `${line.schedulesDetailed.length} tipos de horário` : 'Horário geral'}
-              </Badge>
+              {line.schedulesDetailed ? (
+                <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50">
+                  <Calendar className="h-3 w-3 mr-1" />
+                  {line.schedulesDetailed.length} tipos de horário
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="text-amber-600 border-amber-200 bg-amber-50">
+                  <Info className="h-3 w-3 mr-1" />
+                  Horário geral
+                </Badge>
+              )}
             </div>
             <h3 className="font-semibold text-lg group-hover:text-primary transition-smooth">
               {route}
@@ -157,54 +165,51 @@ export const BusLineCard = ({ line }: BusLineCardProps) => {
 
         {/* Schedule Display */}
         {line.schedulesDetailed && line.schedulesDetailed.length > 0 ? (
-          <Tabs defaultValue={defaultTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-3 mb-4">
+          <>
+            <ScheduleAlert 
+              type="detailed" 
+              scheduleCount={line.schedulesDetailed.length}
+              lastUpdated={line.lastUpdated}
+            />
+            <Tabs defaultValue={defaultTab} className="w-full">
+              <TabsList className="grid w-full grid-cols-3 mb-4">
+                {line.schedulesDetailed.map((schedule) => (
+                  <TabsTrigger 
+                    key={schedule.tipo} 
+                    value={schedule.tipo}
+                    className="text-xs"
+                  >
+                    {BusDataExtractor.getScheduleTypeLabel(schedule.tipo)}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+              
               {line.schedulesDetailed.map((schedule) => (
-                <TabsTrigger 
-                  key={schedule.tipo} 
-                  value={schedule.tipo}
-                  className="text-xs"
-                >
-                  {BusDataExtractor.getScheduleTypeLabel(schedule.tipo)}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-            
-            {line.schedulesDetailed.map((schedule) => (
-              <TabsContent key={schedule.tipo} value={schedule.tipo} className="mt-0">
-                <div className="mb-3 p-3 bg-muted/30 rounded-lg border">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4 text-primary" />
-                    <span className="font-medium text-sm">
-                      {BusDataExtractor.getScheduleTypeLabel(schedule.tipo)}
-                    </span>
-                    {schedule.tipo === currentScheduleType && (
-                      <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50 text-xs">
-                        Hoje
-                      </Badge>
-                    )}
+                <TabsContent key={schedule.tipo} value={schedule.tipo} className="mt-0">
+                  <div className="mb-3 p-3 bg-muted/30 rounded-lg border">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-primary" />
+                      <span className="font-medium text-sm">
+                        {BusDataExtractor.getScheduleTypeLabel(schedule.tipo)}
+                      </span>
+                      {schedule.tipo === currentScheduleType && (
+                        <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50 text-xs">
+                          Hoje
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {schedule.horarios.length} horários disponíveis
+                    </p>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {schedule.horarios.length} horários disponíveis
-                  </p>
-                </div>
-                {renderSchedulePeriods(schedule.horarios)}
-              </TabsContent>
-            ))}
-          </Tabs>
+                  {renderSchedulePeriods(schedule.horarios)}
+                </TabsContent>
+              ))}
+            </Tabs>
+          </>
         ) : (
           <div>
-            <div className="mb-3 p-3 bg-orange-50 rounded-lg border border-orange-200">
-              <div className="flex items-center gap-2">
-                <Info className="h-4 w-4 text-orange-600" />
-                <span className="font-medium text-sm text-orange-800">
-                  Horário Geral (não categorizado por dia)
-                </span>
-              </div>
-              <p className="text-xs text-orange-600 mt-1">
-                Estes horários podem variar entre dias úteis, sábados e domingos
-              </p>
-            </div>
+            <ScheduleAlert type="general" />
             {renderSchedulePeriods(line.horarios)}
           </div>
         )}
