@@ -12,12 +12,44 @@ export const PWAPrompt = () => {
   const { isInstallable, isInstalled, installApp } = usePWA();
   const { permission, isSupported, requestPermission, sendTestNotification } = useNotifications();
 
-  // Don't show if app is already installed, or if user dismissed notifications
-  if (isInstalled || (!isInstallable && permission !== 'default') || !isVisible) {
+  // Don't show prompt if:
+  // 1. App is already installed
+  // 2. Not installable and user has no interest in notifications
+  // 3. User manually dismissed the prompt
+  if (isInstalled || !isVisible || (!isInstallable && permission !== 'default' && !hasInteracted)) {
     return null;
   }
 
-  // Only show notification options after user shows interest in PWA
+  // If app is installed, only show notification test option
+  if (isInstalled && permission === 'granted') {
+    return (
+      <Card className="fixed bottom-4 right-4 w-80 shadow-lg z-50 border-green-200 bg-green-50">
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between mb-2">
+            <h4 className="font-medium text-green-800">App Instalado!</h4>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsVisible(false)}
+              className="h-6 w-6"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+          <Button 
+            onClick={sendTestNotification} 
+            variant="outline" 
+            className="w-full" 
+            size="sm"
+          >
+            <Bell className="h-4 w-4 mr-2" />
+            Testar Notificação
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
   const handleInstallClick = async () => {
     setHasInteracted(true);
     await installApp();
