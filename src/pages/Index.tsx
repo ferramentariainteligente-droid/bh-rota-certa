@@ -2,6 +2,7 @@ import { Bus, Clock, MapPin, Sparkles, RefreshCw, Database } from "lucide-react"
 import { SearchBar } from "@/components/SearchBar";
 import { BusLineCard } from "@/components/BusLineCard";
 import { AdSpace } from "@/components/AdSpace";
+import { PWAPrompt } from "@/components/PWAPrompt";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
@@ -237,6 +238,8 @@ const Index = () => {
           </div>
         </div>
       </footer>
+      
+      <PWAPrompt />
     </div>
   );
 };
