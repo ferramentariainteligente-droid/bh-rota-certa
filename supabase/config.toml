@@ -1,1 +1,7 @@
 project_id = "pazyddmjprfsloyuchnf"
+
+[functions.process-bus-data]
+verify_jwt = false
+
+[functions.scrape-bus-schedules]
+verify_jwt = false

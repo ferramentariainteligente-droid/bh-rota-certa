@@ -3,7 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BusDataUpdater } from '@/components/BusDataUpdater';
+import { ScrapingManager } from '@/components/ScrapingManager';
 import { Bus, LogOut, Settings, Database, Download, Upload } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import busLinesData from '@/data/bus-lines.json';
 
@@ -118,6 +120,17 @@ const AdminPanel = () => {
       </header>
 
       <main className="container mx-auto px-4 py-8">
+        <Tabs defaultValue="dataset" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-2 mb-8">
+            <TabsTrigger value="dataset" className="text-sm md:text-base">
+              📊 Dataset Manual
+            </TabsTrigger>
+            <TabsTrigger value="scraping" className="text-sm md:text-base">
+              🕷️ Scraping Automático
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="dataset" className="space-y-8">
         {/* Statistics Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <Card>
@@ -314,16 +327,22 @@ const AdminPanel = () => {
           onUpdateComplete={handleUpdateComplete}
         />
 
-        {/* Navigation */}
-        <div className="mt-8 text-center">
-          <Button 
-            variant="ghost" 
-            onClick={() => navigate('/')}
-            className="text-muted-foreground hover:text-foreground"
-          >
-            ← Voltar ao site principal
-          </Button>
-        </div>
+            {/* Navigation */}
+            <div className="mt-8 text-center">
+              <Button 
+                variant="ghost" 
+                onClick={() => navigate('/')}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                ← Voltar ao site principal
+              </Button>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="scraping">
+            <ScrapingManager />
+          </TabsContent>
+        </Tabs>
       </main>
     </div>
   );

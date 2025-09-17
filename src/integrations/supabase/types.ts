@@ -73,6 +73,148 @@ export type Database = {
           },
         ]
       }
+      scraped_bus_lines: {
+        Row: {
+          created_at: string
+          id: string
+          last_scraped_at: string | null
+          line_code: string
+          line_name: string
+          line_url: string
+          metadata: Json | null
+          route_description: string | null
+          schedule_data: Json | null
+          scraping_status: string
+          source_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_scraped_at?: string | null
+          line_code: string
+          line_name: string
+          line_url: string
+          metadata?: Json | null
+          route_description?: string | null
+          schedule_data?: Json | null
+          scraping_status?: string
+          source_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_scraped_at?: string | null
+          line_code?: string
+          line_name?: string
+          line_url?: string
+          metadata?: Json | null
+          route_description?: string | null
+          schedule_data?: Json | null
+          scraping_status?: string
+          source_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scraped_bus_lines_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "scraping_sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scraping_logs: {
+        Row: {
+          completed_at: string | null
+          error_message: string | null
+          execution_details: Json | null
+          execution_id: string
+          id: string
+          lines_failed: number | null
+          lines_found: number | null
+          lines_processed: number | null
+          lines_updated: number | null
+          source_id: string | null
+          started_at: string
+          status: string
+        }
+        Insert: {
+          completed_at?: string | null
+          error_message?: string | null
+          execution_details?: Json | null
+          execution_id: string
+          id?: string
+          lines_failed?: number | null
+          lines_found?: number | null
+          lines_processed?: number | null
+          lines_updated?: number | null
+          source_id?: string | null
+          started_at?: string
+          status: string
+        }
+        Update: {
+          completed_at?: string | null
+          error_message?: string | null
+          execution_details?: Json | null
+          execution_id?: string
+          id?: string
+          lines_failed?: number | null
+          lines_found?: number | null
+          lines_processed?: number | null
+          lines_updated?: number | null
+          source_id?: string | null
+          started_at?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scraping_logs_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "scraping_sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scraping_sources: {
+        Row: {
+          base_url: string
+          created_at: string
+          id: string
+          is_active: boolean
+          last_scraped_at: string | null
+          name: string
+          scraping_config: Json | null
+          site_type: string
+          updated_at: string
+        }
+        Insert: {
+          base_url: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          last_scraped_at?: string | null
+          name: string
+          scraping_config?: Json | null
+          site_type: string
+          updated_at?: string
+        }
+        Update: {
+          base_url?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          last_scraped_at?: string | null
+          name?: string
+          scraping_config?: Json | null
+          site_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
