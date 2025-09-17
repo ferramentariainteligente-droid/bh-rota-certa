@@ -9,19 +9,25 @@ declare global {
 export const useAnalytics = () => {
   const trackEvent = (eventName: string, parameters: Record<string, any> = {}) => {
     if (typeof window !== 'undefined' && window.gtag) {
+      console.log('Tracking event:', eventName, parameters);
       window.gtag('event', eventName, {
         event_category: 'Admin Panel',
         ...parameters,
       });
+    } else {
+      console.warn('Google Analytics not available');
     }
   };
 
   const trackPageView = (pageName: string) => {
     if (typeof window !== 'undefined' && window.gtag) {
-      window.gtag('config', 'G-9MVZMNTHXN', {
+      console.log('Tracking page view:', pageName);
+      window.gtag('event', 'page_view', {
         page_title: pageName,
         page_location: window.location.href,
       });
+    } else {
+      console.warn('Google Analytics not available for page view');
     }
   };
 

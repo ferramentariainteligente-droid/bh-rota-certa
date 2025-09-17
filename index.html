@@ -25,7 +25,19 @@
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
-      gtag('config', 'G-9MVZMNTHXN');
+      
+      gtag('config', 'G-9MVZMNTHXN', {
+        page_title: document.title,
+        page_location: window.location.href,
+        debug_mode: false,
+        send_page_view: true
+      });
+
+      // Send a test event to verify tracking is working
+      gtag('event', 'page_view', {
+        page_title: 'BH Ônibus - Site Loaded',
+        page_location: window.location.href
+      });
     </script>
   </head>
 
