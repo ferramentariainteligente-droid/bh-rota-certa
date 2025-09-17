@@ -1,9 +1,16 @@
 import { useState, useMemo } from "react";
 
+interface ExtractedSchedule {
+  tipo: string;
+  horarios: string[];
+}
+
 interface BusLine {
   url: string;
   linha: string;
   horarios: string[];
+  schedulesDetailed?: ExtractedSchedule[];
+  lastUpdated?: string;
 }
 
 export const useBusSearch = (busLines: BusLine[]) => {
@@ -22,9 +29,17 @@ export const useBusSearch = (busLines: BusLine[]) => {
     }
 
     if (selectedHour) {
-      filtered = filtered.filter(line => 
-        line.horarios.some(horario => horario.startsWith(selectedHour))
-      );
+      filtered = filtered.filter(line => {
+        // Check in main horarios
+        const mainHorariosMatch = line.horarios.some(horario => horario.startsWith(selectedHour));
+        
+        // Also check in detailed schedules if available
+        const detailedHorariosMatch = line.schedulesDetailed?.some(schedule =>
+          schedule.horarios.some(horario => horario.startsWith(selectedHour))
+        ) || false;
+        
+        return mainHorariosMatch || detailedHorariosMatch;
+      });
     }
 
     return filtered;

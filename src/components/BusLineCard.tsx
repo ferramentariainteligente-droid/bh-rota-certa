@@ -1,11 +1,19 @@
-import { Clock, MapPin, ExternalLink } from "lucide-react";
+import { Clock, MapPin, ExternalLink, Calendar } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { BusDataExtractor } from "@/services/BusDataExtractor";
+
+interface ExtractedSchedule {
+  tipo: string;
+  horarios: string[];
+}
 
 interface BusLine {
   url: string;
   linha: string;
   horarios: string[];
+  schedulesDetailed?: ExtractedSchedule[];
+  lastUpdated?: string;
 }
 
 interface BusLineCardProps {
@@ -50,8 +58,16 @@ export const BusLineCard = ({ line }: BusLineCardProps) => {
     return periods;
   };
 
-  const scheduleGroups = groupSchedules(line.horarios);
-  const nextDeparture = line.horarios.find(horario => {
+  // Use detailed schedules if available, otherwise fall back to simple horarios
+  const currentScheduleType = BusDataExtractor.getCurrentScheduleType();
+  const currentSchedule = line.schedulesDetailed 
+    ? BusDataExtractor.getRelevantSchedule(line.schedulesDetailed)
+    : null;
+  
+  const displayHorarios = currentSchedule ? currentSchedule.horarios : line.horarios;
+  const scheduleGroups = groupSchedules(displayHorarios);
+  
+  const nextDeparture = displayHorarios.find(horario => {
     const now = new Date();
     const [hour, minute] = horario.split(':').map(Number);
     const departureTime = new Date();
@@ -79,6 +95,12 @@ export const BusLineCard = ({ line }: BusLineCardProps) => {
                 <Badge variant="outline" className="text-success border-success/20 bg-success/5">
                   <Clock className="h-3 w-3 mr-1" />
                   Próximo: {nextDeparture}
+                </Badge>
+              )}
+              {currentSchedule && (
+                <Badge variant="outline" className="text-primary border-primary/20 bg-primary/5">
+                  <Calendar className="h-3 w-3 mr-1" />
+                  {BusDataExtractor.getScheduleTypeLabel(currentSchedule.tipo)}
                 </Badge>
               )}
             </div>
@@ -137,7 +159,12 @@ export const BusLineCard = ({ line }: BusLineCardProps) => {
             <span>Move Metropolitano</span>
           </div>
           <div className="text-sm text-muted-foreground">
-            {line.horarios.length} horários disponíveis
+            {displayHorarios.length} horários disponíveis
+            {line.schedulesDetailed && (
+              <span className="ml-2 text-xs text-primary">
+                • {line.schedulesDetailed.length} tipos de dia
+              </span>
+            )}
           </div>
         </div>
       </CardContent>

@@ -2,17 +2,26 @@ import { Bus, Clock, MapPin, Sparkles } from "lucide-react";
 import { SearchBar } from "@/components/SearchBar";
 import { BusLineCard } from "@/components/BusLineCard";
 import { AdSpace } from "@/components/AdSpace";
+import { BusDataUpdater } from "@/components/BusDataUpdater";
+import { useState } from "react";
 import { useBusSearch } from "@/hooks/useBusSearch";
 import busLinesData from "@/data/bus-lines.json";
+
+interface ExtractedSchedule {
+  tipo: string;
+  horarios: string[];
+}
 
 interface BusLine {
   url: string;
   linha: string;
   horarios: string[];
+  schedulesDetailed?: ExtractedSchedule[];
+  lastUpdated?: string;
 }
 
 const Index = () => {
-  const busLines: BusLine[] = busLinesData as BusLine[];
+  const [busLines, setBusLines] = useState(busLinesData as BusLine[]);
   
   const {
     searchTerm,
@@ -23,6 +32,10 @@ const Index = () => {
     clearFilters,
     hasFilters
   } = useBusSearch(busLines);
+
+  const handleUpdateComplete = (updatedLines: any[]) => {
+    setBusLines(updatedLines);
+  };
 
   const popularHours = ["05", "06", "07", "08", "17", "18", "19", "22"];
 
@@ -126,9 +139,28 @@ const Index = () => {
           </div>
         </>
 
-        {/* Ad Space - Bottom */}
-        <AdSpace position="bottom" />
       </main>
+
+      {/* Data Updater Section */}
+      <section className="py-12 px-4">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-8">
+            <h2 className="text-2xl font-bold text-foreground mb-2">
+              🔄 Atualizar Dados das Linhas
+            </h2>
+            <p className="text-muted-foreground">
+              Capture horários detalhados por dia da semana dos sites oficiais
+            </p>
+          </div>
+          <BusDataUpdater 
+            busLines={busLines}
+            onUpdateComplete={handleUpdateComplete}
+          />
+        </div>
+      </section>
+
+      {/* Ad Space - Bottom */}
+      <AdSpace position="bottom" />
 
       {/* Footer */}
       <footer className="bg-muted/30 border-t mt-12">
