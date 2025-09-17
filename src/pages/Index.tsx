@@ -167,12 +167,12 @@ const Index = () => {
           </div>
           <div className="border-t mt-6 pt-6 text-center text-sm text-muted-foreground">
             <p>© 2024 BH Ônibus - Todos os direitos reservados</p>
-            <div className="mt-2">
+            <div className="mt-3">
               <a 
                 href="/admin/login" 
-                className="text-xs text-muted-foreground/50 hover:text-muted-foreground transition-smooth"
+                className="inline-block px-3 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600 transition-smooth font-medium"
               >
-                Admin
+                🔐 Admin
               </a>
             </div>
           </div>
