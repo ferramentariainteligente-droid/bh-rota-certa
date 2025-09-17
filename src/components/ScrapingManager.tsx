@@ -20,7 +20,8 @@ import {
   Play,
   Pause,
   TestTube,
-  ExternalLink
+  ExternalLink,
+  Bug
 } from 'lucide-react';
 
 interface ScrapingSource {
@@ -436,17 +437,37 @@ export const ScrapingManager = () => {
               Atualizar Dados
             </Button>
 
-            <Button 
-              onClick={() => {
-                // Force refresh of integrated data
-                window.location.href = '/';
-              }}
-              variant="secondary"
-              className="flex items-center gap-2"
-            >
-              <RefreshCw className="w-4 h-4" />
-              Ver Página Principal
-            </Button>
+          <Button 
+            onClick={() => {
+              // Force refresh of integrated data
+              window.location.href = '/';
+            }}
+            variant="secondary"
+            className="flex items-center gap-2"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Ver Página Principal
+          </Button>
+
+          <Button 
+            onClick={async () => {
+              setIsTesting(true);
+              try {
+                await testUrlScraping();
+                // Also test the specific 4211 line
+                setTestUrl("https://movemetropolitano.com.br/4211-terminal-sao-benedito-circular-conjunto-cristina");
+                await testUrlScraping();
+              } finally {
+                setIsTesting(false);
+              }
+            }}
+            variant="outline"
+            className="flex items-center gap-2"
+            disabled={isTesting}
+          >
+            <Bug className="w-4 h-4" />
+            {isTesting ? 'Testando 4211...' : 'Testar Linha 4211'}
+          </Button>
           </div>
 
           {isRunning && currentExecution && (
