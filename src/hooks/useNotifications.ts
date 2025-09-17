@@ -8,7 +8,7 @@ export const useNotifications = () => {
 
   useEffect(() => {
     // Check if notifications are supported
-    const supported = 'Notification' in window && 'serviceWorker' in navigator;
+    const supported = 'Notification' in window;
     setIsSupported(supported);
     
     if (supported) {
@@ -20,7 +20,7 @@ export const useNotifications = () => {
     if (!isSupported) {
       toast({
         title: "Notificações não suportadas",
-        description: "Seu navegador não suporta notificações push.",
+        description: "Seu navegador não suporta notificações.",
         variant: "destructive"
       });
       return false;
@@ -36,19 +36,6 @@ export const useNotifications = () => {
           description: "Você receberá atualizações sobre horários de ônibus."
         });
         
-        // Register for push notifications
-        if ('serviceWorker' in navigator) {
-          const registration = await navigator.serviceWorker.ready;
-          
-          // Subscribe to push notifications
-          const subscription = await registration.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: null // You would need to add your VAPID key here
-          });
-          
-          console.log('Push subscription:', subscription);
-        }
-        
         return true;
       } else {
         toast({
@@ -62,7 +49,7 @@ export const useNotifications = () => {
       console.error('Error requesting notification permission:', error);
       toast({
         title: "Erro ao solicitar permissão",
-        description: "Não foi possível solicitar permissão para notificações.",
+        description: "Tente habilitar notificações manualmente nas configurações do navegador.",
         variant: "destructive"
       });
       return false;
@@ -71,11 +58,22 @@ export const useNotifications = () => {
 
   const sendTestNotification = () => {
     if (permission === 'granted') {
-      new Notification('BH Ônibus', {
-        body: 'Notificações habilitadas com sucesso!',
-        icon: '/favicon.png',
-        badge: '/favicon.png'
-      });
+      try {
+        new Notification('BH Ônibus', {
+          body: 'Notificações habilitadas com sucesso! 🚌',
+          icon: '/favicon.png',
+          badge: '/favicon.png',
+          tag: 'test-notification',
+          requireInteraction: false
+        });
+      } catch (error) {
+        console.error('Error sending test notification:', error);
+        toast({
+          title: "Erro ao enviar notificação",
+          description: "Não foi possível enviar a notificação de teste.",
+          variant: "destructive"
+        });
+      }
     }
   };
 

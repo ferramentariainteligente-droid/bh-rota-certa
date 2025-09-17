@@ -51,14 +51,14 @@ self.addEventListener('activate', (event) => {
 
 // Push notification event
 self.addEventListener('push', (event) => {
-  const options = {
-    body: event.data ? event.data.text() : 'Nova informação sobre horários de ônibus!',
+  let options = {
+    body: 'Nova informação sobre horários de ônibus! 🚌',
     icon: '/favicon.png',
     badge: '/favicon.png',
     vibrate: [100, 50, 100],
     data: {
       dateOfArrival: Date.now(),
-      primaryKey: '2'
+      primaryKey: 'bh-onibus-notification'
     },
     actions: [
       {
@@ -70,8 +70,22 @@ self.addEventListener('push', (event) => {
         action: 'close',
         title: 'Fechar'
       }
-    ]
+    ],
+    tag: 'bus-update',
+    requireInteraction: false
   };
+
+  // If push event has data, use it
+  if (event.data) {
+    try {
+      const pushData = event.data.json();
+      options.body = pushData.body || options.body;
+      options.data = { ...options.data, ...pushData.data };
+    } catch (e) {
+      // If not JSON, use as text
+      options.body = event.data.text() || options.body;
+    }
+  }
 
   event.waitUntil(
     self.registration.showNotification('BH Ônibus', options)
