@@ -3,6 +3,7 @@ import { SearchBar } from "@/components/SearchBar";
 import { BusLineCard } from "@/components/BusLineCard";
 import { AdSpace } from "@/components/AdSpace";
 import { PWAPrompt } from "@/components/PWAPrompt";
+import { LocationSuggestions } from "@/components/LocationSuggestions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
@@ -129,6 +130,11 @@ const Index = () => {
 
       {/* Ad Space - Top */}
       <AdSpace position="top" />
+
+      {/* Location Suggestions */}
+      <section className="container mx-auto px-4 py-6">
+        <LocationSuggestions />
+      </section>
 
       <main className="container mx-auto px-4 py-6">
         {/* Loading State */}
