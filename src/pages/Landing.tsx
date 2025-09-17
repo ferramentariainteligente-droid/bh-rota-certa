@@ -17,7 +17,9 @@ const Landing = () => {
             <span className="text-xl font-bold">BH Ônibus</span>
           </div>
           <Link to="/horarios">
-            <Button variant="outline">Acessar Sistema</Button>
+            <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-lg hover:shadow-xl transition-all duration-200">
+              Acessar Sistema
+            </Button>
           </Link>
         </nav>
       </header>
