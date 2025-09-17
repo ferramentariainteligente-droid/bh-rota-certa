@@ -119,7 +119,7 @@ const AdminPanel = () => {
 
       <main className="container mx-auto px-4 py-8">
         {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center gap-4">
@@ -141,7 +141,27 @@ const AdminPanel = () => {
                   <Database className="h-6 w-6 text-green-600" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-green-600">{linesWithSchedules}</p>
+                  <p className="text-2xl font-bold text-green-600">
+                    {busLines.filter(line => 
+                      line.url && 
+                      line.url.trim() !== '' &&
+                      (line.url.startsWith('http') || line.url.startsWith('www'))
+                    ).length}
+                  </p>
+                  <p className="text-sm text-muted-foreground">Linhas Processáveis</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-blue-100 rounded-xl">
+                  <Settings className="h-6 w-6 text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-blue-600">{linesWithSchedules}</p>
                   <p className="text-sm text-muted-foreground">Com Horários Detalhados</p>
                 </div>
               </div>
@@ -156,14 +176,104 @@ const AdminPanel = () => {
                 </div>
                 <div>
                   <p className="text-2xl font-bold text-orange-600">
-                    {Math.round((linesWithSchedules / busLines.length) * 100)}%
+                    {busLines.filter(line => 
+                      !line.url || 
+                      line.url.trim() === '' ||
+                      (!line.url.startsWith('http') && !line.url.startsWith('www'))
+                    ).length}
                   </p>
-                  <p className="text-sm text-muted-foreground">Cobertura</p>
+                  <p className="text-sm text-muted-foreground">Linhas Ignoradas</p>
                 </div>
               </div>
             </CardContent>
           </Card>
         </div>
+
+        {/* Analysis Section */}
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Database className="h-5 w-5" />
+              Análise Detalhada do Dataset
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h4 className="font-medium mb-3">Status das Linhas</h4>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span>Total no sistema:</span>
+                    <strong>{busLines.length}</strong>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Com URLs válidas:</span>
+                    <strong className="text-green-600">
+                      {busLines.filter(line => 
+                        line.url && 
+                        line.url.trim() !== '' &&
+                        (line.url.startsWith('http') || line.url.startsWith('www'))
+                      ).length}
+                    </strong>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Sem URL ou inválida:</span>
+                    <strong className="text-orange-600">
+                      {busLines.filter(line => 
+                        !line.url || 
+                        line.url.trim() === '' ||
+                        (!line.url.startsWith('http') && !line.url.startsWith('www'))
+                      ).length}
+                    </strong>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Com horários detalhados:</span>
+                    <strong className="text-blue-600">{linesWithSchedules}</strong>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <h4 className="font-medium mb-3">Taxa de Cobertura</h4>
+                <div className="space-y-3">
+                  <div>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span>Processáveis</span>
+                      <span>{Math.round((busLines.filter(line => 
+                        line.url && 
+                        line.url.trim() !== '' &&
+                        (line.url.startsWith('http') || line.url.startsWith('www'))
+                      ).length / busLines.length) * 100)}%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-green-500 h-2 rounded-full" 
+                        style={{width: `${(busLines.filter(line => 
+                          line.url && 
+                          line.url.trim() !== '' &&
+                          (line.url.startsWith('http') || line.url.startsWith('www'))
+                        ).length / busLines.length) * 100}%`}}
+                      ></div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span>Com horários detalhados</span>
+                      <span>{Math.round((linesWithSchedules / busLines.length) * 100)}%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-blue-500 h-2 rounded-full" 
+                        style={{width: `${(linesWithSchedules / busLines.length) * 100}%`}}
+                      ></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Quick Actions */}
         <Card className="mb-8">

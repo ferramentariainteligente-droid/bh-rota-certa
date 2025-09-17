@@ -92,11 +92,17 @@ export const BusDataUpdater = ({ busLines, onUpdateComplete }: BusDataUpdaterPro
       batch.map(async (line) => {
         try {
           // Skip invalid URLs
-          if (!line.url || !line.url.startsWith('http') || line.url.includes('expressounir.com.br')) {
+          if (!line.url || line.url.trim() === '' || (!line.url.startsWith('http') && !line.url.startsWith('www'))) {
             return line;
           }
 
-          const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(line.url)}`);
+          // Fix URLs that start with www but don't have protocol
+          let processUrl = line.url;
+          if (line.url.startsWith('www')) {
+            processUrl = 'https://' + line.url;
+          }
+
+          const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(processUrl)}`);
           const data = await response.json();
           
           if (data.contents) {
@@ -132,18 +138,29 @@ export const BusDataUpdater = ({ busLines, onUpdateComplete }: BusDataUpdaterPro
     setCompletedLines(0);
     setFailedLines(0);
     
-    const validLines = busLines.filter(line => 
-      line.url && 
-      line.url.startsWith('http') && 
-      !line.url.includes('expressounir.com.br')
-    );
+  const validLines = busLines.filter(line => 
+    line.url && 
+    line.url.trim() !== '' &&
+    (line.url.startsWith('http') || line.url.startsWith('www'))
+  );
+
+  const skippedLines = busLines.filter(line => 
+    !line.url || 
+    line.url.trim() === '' ||
+    (!line.url.startsWith('http') && !line.url.startsWith('www'))
+  );
+
+  console.log(`Total de linhas: ${busLines.length}`);
+  console.log(`Linhas válidas: ${validLines.length}`);
+  console.log(`Linhas ignoradas: ${skippedLines.length}`);
+  console.log('Exemplos de linhas ignoradas:', skippedLines.slice(0, 5).map(l => ({ linha: l.linha, url: l.url })));
 
     const totalLines = validLines.length;
     const updatedLines = [...busLines];
     
     try {
-      // Process in batches
-      for (let i = 0; i < validLines.length; i += batchSize) {
+        // Process in batches
+        for (let i = 0; i < validLines.length; i += batchSize) {
         if (isPaused) break;
 
         const batch = validLines.slice(i, i + batchSize);
@@ -214,8 +231,8 @@ export const BusDataUpdater = ({ busLines, onUpdateComplete }: BusDataUpdaterPro
 
   const validLines = busLines.filter(line => 
     line.url && 
-    line.url.startsWith('http') && 
-    !line.url.includes('expressounir.com.br')
+    line.url.trim() !== '' &&
+    (line.url.startsWith('http') || line.url.startsWith('www'))
   ).length;
 
   const linesWithSchedules = busLines.filter(line => line.schedulesDetailed?.length).length;
