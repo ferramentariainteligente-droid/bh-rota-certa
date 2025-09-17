@@ -1,27 +1,23 @@
-import { Bus, Clock, MapPin, Sparkles } from "lucide-react";
+import { Bus, Clock, MapPin, Sparkles, RefreshCw, Database } from "lucide-react";
 import { SearchBar } from "@/components/SearchBar";
 import { BusLineCard } from "@/components/BusLineCard";
 import { AdSpace } from "@/components/AdSpace";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
-import { useState } from "react";
+import { useIntegratedBusData } from '@/hooks/useIntegratedBusData';
 import { useBusSearch } from "@/hooks/useBusSearch";
-import busLinesData from "@/data/bus-lines.json";
-
-interface ExtractedSchedule {
-  tipo: string;
-  horarios: string[];
-}
-
-interface BusLine {
-  url: string;
-  linha: string;
-  horarios: string[];
-  schedulesDetailed?: ExtractedSchedule[];
-  lastUpdated?: string;
-}
 
 const Index = () => {
-  const [busLines, setBusLines] = useState(busLinesData as BusLine[]);
+  const { 
+    busLines, 
+    loading, 
+    error, 
+    refreshData, 
+    totalLines, 
+    linesWithSchedules,
+    linesFromScraping 
+  } = useIntegratedBusData();
   
   const {
     searchTerm,
@@ -32,7 +28,6 @@ const Index = () => {
     clearFilters,
     hasFilters
   } = useBusSearch(busLines);
-
 
   const popularHours = ["05", "06", "07", "08", "17", "18", "19", "22"];
 
@@ -52,13 +47,46 @@ const Index = () => {
               </div>
             </div>
             
-            {/* Admin Button */}
-            <a 
-              href="/admin/login" 
-              className="inline-block px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-smooth font-medium text-sm"
-            >
-              🔐 Admin
-            </a>
+            <div className="flex items-center gap-3">
+              {/* Status Badges */}
+              <div className="hidden md:flex flex-col items-end gap-1">
+                <Badge variant="secondary" className="bg-white/20 text-white border-white/30 text-xs">
+                  {totalLines} linhas
+                </Badge>
+                {linesWithSchedules > 0 && (
+                  <Badge variant="secondary" className="bg-green-500/20 text-white border-green-300/30 text-xs">
+                    <Clock className="w-3 h-3 mr-1" />
+                    {linesWithSchedules} categorizadas
+                  </Badge>
+                )}
+                {linesFromScraping > 0 && (
+                  <Badge variant="secondary" className="bg-blue-500/20 text-white border-blue-300/30 text-xs">
+                    <Database className="w-3 h-3 mr-1" />
+                    {linesFromScraping} atualizadas
+                  </Badge>
+                )}
+              </div>
+              
+              {/* Refresh Button */}
+              <Button
+                onClick={refreshData}
+                disabled={loading}
+                variant="ghost"
+                size="sm"
+                className="text-white hover:bg-white/20"
+                title="Atualizar dados"
+              >
+                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              </Button>
+              
+              {/* Admin Button */}
+              <a 
+                href="/admin/login" 
+                className="inline-block px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-smooth font-medium text-sm"
+              >
+                🔐 Admin
+              </a>
+            </div>
           </div>
           
           <SearchBar 
@@ -70,85 +98,112 @@ const Index = () => {
       </header>
 
       {/* Quick Hour Filters */}
-        <section className="bg-white shadow-card">
-          <div className="container mx-auto px-4 py-4">
-            <div className="flex items-center gap-2 mb-3">
-              <Clock className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm font-medium text-muted-foreground">Horários populares:</span>
-            </div>
-            <div className="flex gap-2 overflow-x-auto pb-2">
-              {popularHours.map((hour) => {
-                const isSelected = selectedHour === hour;
-                
-                return (
-                  <button
-                    key={hour}
-                    onClick={() => setSelectedHour(isSelected ? null : hour)}
-                    className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-smooth ${
-                      isSelected
-                        ? "bg-primary text-primary-foreground shadow-soft"
-                        : "bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    {hour}:00
-                  </button>
-                );
-              })}
-            </div>
+      <section className="bg-white shadow-card">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Clock className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-medium text-muted-foreground">Horários populares:</span>
           </div>
-        </section>
-
+          <div className="flex gap-2 overflow-x-auto pb-2">
+            {popularHours.map((hour) => {
+              const isSelected = selectedHour === hour;
+              
+              return (
+                <button
+                  key={hour}
+                  onClick={() => setSelectedHour(isSelected ? null : hour)}
+                  className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-smooth ${
+                    isSelected
+                      ? "bg-primary text-primary-foreground shadow-soft"
+                      : "bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {hour}:00
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </section>
 
       {/* Ad Space - Top */}
       <AdSpace position="top" />
 
       <main className="container mx-auto px-4 py-6">
-        {/* Results Section */}
-        <>
-          {/* Results Summary */}
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-primary" />
-              <h2 className="text-xl font-semibold">
-                {filteredBusLines.length} linhas encontradas
-              </h2>
+        {/* Loading State */}
+        {loading && (
+          <div className="text-center py-12">
+            <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-4 text-muted-foreground" />
+            <p className="text-muted-foreground">Carregando horários atualizados...</p>
+          </div>
+        )}
+
+        {/* Error State */}
+        {error && (
+          <div className="text-center py-12">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Bus className="h-8 w-8 text-red-500" />
             </div>
-            {hasFilters && (
-              <button
-                onClick={clearFilters}
-                className="text-sm text-muted-foreground hover:text-foreground transition-smooth"
-              >
-                Limpar filtros
-              </button>
-            )}
+            <h3 className="text-lg font-medium mb-2 text-red-700">Erro ao carregar dados</h3>
+            <p className="text-red-600 mb-4">{error}</p>
+            <Button onClick={refreshData} variant="outline">
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Tentar Novamente
+            </Button>
           </div>
+        )}
 
-          {/* Bus Lines Grid */}
-          <div className="grid gap-4 md:gap-6">
-            {filteredBusLines.length > 0 ? (
-              filteredBusLines.map((line, index) => (
-                <div key={line.url}>
-                  <BusLineCard line={line} />
-                  {/* Ad Space - Between Results */}
-                  {(index + 1) % 5 === 0 && <AdSpace position="between" />}
-                </div>
-              ))
-            ) : (
-              <div className="text-center py-12">
-                <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
-                  <MapPin className="h-8 w-8 text-muted-foreground" />
-                </div>
-                <h3 className="text-lg font-medium mb-2">Nenhuma linha encontrada</h3>
-                <p className="text-muted-foreground">
-                  Tente buscar por outro termo ou remova os filtros
-                </p>
+        {/* Results Section */}
+        {!loading && !error && (
+          <>
+            {/* Results Summary */}
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-primary" />
+                <h2 className="text-xl font-semibold">
+                  {filteredBusLines.length} linhas encontradas
+                </h2>
+                {linesWithSchedules > 0 && (
+                  <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50">
+                    {linesWithSchedules} com horários categorizados
+                  </Badge>
+                )}
               </div>
-            )}
-          </div>
-        </>
+              {hasFilters && (
+                <button
+                  onClick={clearFilters}
+                  className="text-sm text-muted-foreground hover:text-foreground transition-smooth"
+                >
+                  Limpar filtros
+                </button>
+              )}
+            </div>
 
+            {/* Bus Lines Grid */}
+            <div className="grid gap-4 md:gap-6">
+              {filteredBusLines.length > 0 ? (
+                filteredBusLines.map((line, index) => (
+                  <div key={line.url}>
+                    <BusLineCard line={line} />
+                    {/* Ad Space - Between Results */}
+                    {(index + 1) % 5 === 0 && <AdSpace position="between" />}
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-12">
+                  <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                    <MapPin className="h-8 w-8 text-muted-foreground" />
+                  </div>
+                  <h3 className="text-lg font-medium mb-2">Nenhuma linha encontrada</h3>
+                  <p className="text-muted-foreground">
+                    Tente buscar por outro termo ou remova os filtros
+                  </p>
+                </div>
+              )}
+            </div>
+          </>
+        )}
       </main>
-
 
       {/* Ad Space - Bottom */}
       <AdSpace position="bottom" />
@@ -170,8 +225,11 @@ const Index = () => {
               <h4 className="font-medium mb-3">Informações</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li>📍 Região Metropolitana de BH</li>
-                <li>🚌 {busLines.length} linhas disponíveis</li>
-                <li>⏰ Horários atualizados diariamente</li>
+                <li>🚌 {totalLines} linhas disponíveis</li>
+                <li>⏰ Horários atualizados automaticamente</li>
+                {linesWithSchedules > 0 && (
+                  <li>🕐 {linesWithSchedules} linhas com horários categorizados</li>
+                )}
               </ul>
             </div>
           </div>
