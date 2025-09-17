@@ -5,6 +5,7 @@ import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Download, RefreshCw, AlertCircle, Pause, Play } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useAnalytics } from '@/hooks/useAnalytics';
 
 interface BusLine {
   url: string;
@@ -28,6 +29,7 @@ export const BusDataUpdater = ({ busLines, onUpdateComplete }: BusDataUpdaterPro
   const [failedLines, setFailedLines] = useState(0);
   const [batchSize] = useState(5); // Process 5 lines simultaneously
   const { toast } = useToast();
+  const analytics = useAnalytics();
 
   const extractScheduleFromContent = (content: string, url: string) => {
     try {
@@ -138,13 +140,16 @@ export const BusDataUpdater = ({ busLines, onUpdateComplete }: BusDataUpdaterPro
     setCompletedLines(0);
     setFailedLines(0);
     
+    analytics.trackEvent('server_processing_start', { total_lines: validLines });
+    
     try {
       setCurrentLine('Enviando dados para processamento no servidor...');
       
-      const response = await fetch('/functions/v1/process-bus-data', {
+      const response = await fetch('https://pazyddmjprfsloyuchnf.supabase.co/functions/v1/process-bus-data', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBhenlkZG1qcHJmc2xveXVjaG5mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwOTMzODQsImV4cCI6MjA3MzY2OTM4NH0.E_x8n-p7h-J2oyMKeHm_qST4BBfayQr1KPGkvtrEsBk'}`,
         },
         body: JSON.stringify({
           busLines: busLines,
@@ -159,6 +164,12 @@ export const BusDataUpdater = ({ busLines, onUpdateComplete }: BusDataUpdaterPro
         setCompletedLines(result.stats.completed);
         setFailedLines(result.stats.failed);
         
+        analytics.trackEvent('server_processing_success', { 
+          completed: result.stats.completed, 
+          failed: result.stats.failed,
+          total: result.stats.total 
+        });
+        
         toast({
           title: "✅ Atualização Concluída (Servidor)",
           description: `${result.stats.completed} linhas atualizadas, ${result.stats.failed} falharam.`,
@@ -171,6 +182,10 @@ export const BusDataUpdater = ({ busLines, onUpdateComplete }: BusDataUpdaterPro
 
     } catch (error) {
       console.error('Error during backend update:', error);
+      analytics.trackEvent('server_processing_error', { 
+        error: error instanceof Error ? error.message : 'Unknown error',
+        total_lines: validLines 
+      });
       toast({
         title: "❌ Erro na Atualização",
         description: "Erro no processamento do servidor. Tente novamente.",
