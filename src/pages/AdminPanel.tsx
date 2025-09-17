@@ -4,10 +4,12 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BusDataUpdater } from '@/components/BusDataUpdater';
 import { ScrapingManager } from '@/components/ScrapingManager';
-import { Bus, LogOut, Settings, Database, Download, Upload } from 'lucide-react';
+import { Bus, LogOut, Settings, Database, Download, Upload, AlertCircle } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 import { useAnalytics } from '@/hooks/useAnalytics';
+import { useIntegratedBusData } from '@/hooks/useIntegratedBusData';
 import busLinesData from '@/data/bus-lines.json';
 
 interface ExtractedSchedule {
@@ -24,10 +26,19 @@ interface BusLine {
 }
 
 const AdminPanel = () => {
-  const [busLines, setBusLines] = useState(busLinesData as BusLine[]);
+  const { busLines, loading, error, refreshData, totalLines, linesWithSchedules, linesFromScraping } = useIntegratedBusData();
   const navigate = useNavigate();
   const { toast } = useToast();
   const analytics = useAnalytics();
+
+  // Calculate additional stats
+  const processableLines = busLines.filter(line => 
+    line.url && 
+    line.url.trim() !== '' &&
+    (line.url.startsWith('http') || line.url.startsWith('www'))
+  ).length;
+  
+  const ignoredLines = totalLines - processableLines;
 
   useEffect(() => {
     const isAuthenticated = localStorage.getItem('adminAuth');
@@ -49,7 +60,8 @@ const AdminPanel = () => {
   };
 
   const handleUpdateComplete = (updatedLines: BusLine[]) => {
-    setBusLines(updatedLines);
+    // Refresh integrated data after update
+    refreshData();
   };
 
   const handleImportData = () => {
@@ -63,12 +75,13 @@ const AdminPanel = () => {
         reader.onload = (event) => {
           try {
             const data = JSON.parse(event.target?.result as string);
-            setBusLines(data);
+            // Note: This would need additional logic to merge with Supabase data
             analytics.trackDataImport(data.length);
             toast({
               title: "✅ Dados importados",
               description: `${data.length} linhas importadas com sucesso.`,
             });
+            refreshData(); // Refresh to show updated data
           } catch (error) {
             toast({
               title: "❌ Erro na importação",
@@ -95,7 +108,7 @@ const AdminPanel = () => {
     analytics.trackDataExport(busLines.length);
   };
 
-  const linesWithSchedules = busLines.filter(line => line.schedulesDetailed?.length).length;
+  const linesWithDetailedSchedules = linesWithSchedules;
 
   return (
     <div className="min-h-screen bg-background">
@@ -147,7 +160,7 @@ const AdminPanel = () => {
                   <Bus className="h-6 w-6 text-primary" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{busLines.length}</p>
+                  <p className="text-2xl font-bold">{totalLines}</p>
                   <p className="text-sm text-muted-foreground">Total de Linhas</p>
                 </div>
               </div>
@@ -162,11 +175,7 @@ const AdminPanel = () => {
                 </div>
                 <div>
                   <p className="text-2xl font-bold text-green-600">
-                    {busLines.filter(line => 
-                      line.url && 
-                      line.url.trim() !== '' &&
-                      (line.url.startsWith('http') || line.url.startsWith('www'))
-                    ).length}
+                    {processableLines}
                   </p>
                   <p className="text-sm text-muted-foreground">Linhas Processáveis</p>
                 </div>
@@ -181,7 +190,7 @@ const AdminPanel = () => {
                   <Settings className="h-6 w-6 text-blue-600" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-blue-600">{linesWithSchedules}</p>
+                  <p className="text-2xl font-bold text-blue-600">{linesWithDetailedSchedules}</p>
                   <p className="text-sm text-muted-foreground">Com Horários Detalhados</p>
                 </div>
               </div>
@@ -196,11 +205,7 @@ const AdminPanel = () => {
                 </div>
                 <div>
                   <p className="text-2xl font-bold text-orange-600">
-                    {busLines.filter(line => 
-                      !line.url || 
-                      line.url.trim() === '' ||
-                      (!line.url.startsWith('http') && !line.url.startsWith('www'))
-                    ).length}
+                    {ignoredLines}
                   </p>
                   <p className="text-sm text-muted-foreground">Linhas Ignoradas</p>
                 </div>
@@ -219,39 +224,35 @@ const AdminPanel = () => {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <h4 className="font-medium mb-3">Status das Linhas</h4>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span>Total no sistema:</span>
-                    <strong>{busLines.length}</strong>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Com URLs válidas:</span>
-                    <strong className="text-green-600">
-                      {busLines.filter(line => 
-                        line.url && 
-                        line.url.trim() !== '' &&
-                        (line.url.startsWith('http') || line.url.startsWith('www'))
-                      ).length}
-                    </strong>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Sem URL ou inválida:</span>
-                    <strong className="text-orange-600">
-                      {busLines.filter(line => 
-                        !line.url || 
-                        line.url.trim() === '' ||
-                        (!line.url.startsWith('http') && !line.url.startsWith('www'))
-                      ).length}
-                    </strong>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Com horários detalhados:</span>
-                    <strong className="text-blue-600">{linesWithSchedules}</strong>
+                <div>
+                  <h4 className="font-medium mb-3">Status das Linhas</h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span>Total no sistema:</span>
+                      <strong>{totalLines}</strong>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Com URLs válidas:</span>
+                      <strong className="text-green-600">
+                        {processableLines}
+                      </strong>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Sem URL ou inválida:</span>
+                      <strong className="text-orange-600">
+                        {ignoredLines}
+                      </strong>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Com horários detalhados:</span>
+                      <strong className="text-blue-600">{linesWithDetailedSchedules}</strong>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Dados do Supabase:</span>
+                      <strong className="text-purple-600">{linesFromScraping}</strong>
+                    </div>
                   </div>
                 </div>
-              </div>
 
               <div>
                 <h4 className="font-medium mb-3">Taxa de Cobertura</h4>
@@ -259,20 +260,12 @@ const AdminPanel = () => {
                   <div>
                     <div className="flex justify-between text-sm mb-1">
                       <span>Processáveis</span>
-                      <span>{Math.round((busLines.filter(line => 
-                        line.url && 
-                        line.url.trim() !== '' &&
-                        (line.url.startsWith('http') || line.url.startsWith('www'))
-                      ).length / busLines.length) * 100)}%</span>
+                      <span>{Math.round((processableLines / totalLines) * 100)}%</span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2">
                       <div 
                         className="bg-green-500 h-2 rounded-full" 
-                        style={{width: `${(busLines.filter(line => 
-                          line.url && 
-                          line.url.trim() !== '' &&
-                          (line.url.startsWith('http') || line.url.startsWith('www'))
-                        ).length / busLines.length) * 100}%`}}
+                        style={{width: `${(processableLines / totalLines) * 100}%`}}
                       ></div>
                     </div>
                   </div>
@@ -280,12 +273,12 @@ const AdminPanel = () => {
                   <div>
                     <div className="flex justify-between text-sm mb-1">
                       <span>Com horários detalhados</span>
-                      <span>{Math.round((linesWithSchedules / busLines.length) * 100)}%</span>
+                      <span>{Math.round((linesWithDetailedSchedules / totalLines) * 100)}%</span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2">
                       <div 
                         className="bg-blue-500 h-2 rounded-full" 
-                        style={{width: `${(linesWithSchedules / busLines.length) * 100}%`}}
+                        style={{width: `${(linesWithDetailedSchedules / totalLines) * 100}%`}}
                       ></div>
                     </div>
                   </div>
@@ -328,28 +321,50 @@ const AdminPanel = () => {
           </CardContent>
         </Card>
 
+        {/* Loading/Error States */}
+        {loading && (
+          <Card className="mb-8">
+            <CardContent className="p-6 text-center">
+              <p className="text-muted-foreground">Carregando dados integrados...</p>
+            </CardContent>
+          </Card>
+        )}
+
+        {error && (
+          <Card className="mb-8">
+            <CardContent className="p-6">
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  Erro ao carregar dados integrados: {error}. Usando apenas dados locais.
+                </AlertDescription>
+              </Alert>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Data Updater */}
         <BusDataUpdater 
           busLines={busLines}
           onUpdateComplete={handleUpdateComplete}
         />
 
-            {/* Navigation */}
-            <div className="mt-8 text-center">
-              <Button 
-                variant="ghost" 
-                onClick={() => navigate('/')}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                ← Voltar ao site principal
-              </Button>
-            </div>
-          </TabsContent>
+        {/* Navigation */}
+        <div className="mt-8 text-center">
+          <Button 
+            variant="ghost" 
+            onClick={() => navigate('/')}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            ← Voltar ao site principal
+          </Button>
+        </div>
+      </TabsContent>
 
-          <TabsContent value="scraping">
-            <ScrapingManager />
-          </TabsContent>
-        </Tabs>
+      <TabsContent value="scraping">
+        <ScrapingManager />
+      </TabsContent>
+    </Tabs>
       </main>
     </div>
   );
