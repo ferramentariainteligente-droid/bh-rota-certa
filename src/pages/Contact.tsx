@@ -60,10 +60,10 @@ const Contact = () => {
                   Envie-nos um email e responderemos em até 24 horas.
                 </CardDescription>
                 <a 
-                  href="mailto:contato@bhonibus.com" 
+                  href="mailto:smartcarddigitalbussines@gmail.com" 
                   className="text-primary hover:underline font-medium"
                 >
-                  contato@bhonibus.com
+                  smartcarddigitalbussines@gmail.com
                 </a>
               </CardContent>
             </Card>
@@ -80,10 +80,10 @@ const Contact = () => {
                   Precisa de ajuda técnica ou tem alguma dúvida?
                 </CardDescription>
                 <a 
-                  href="mailto:suporte@bhonibus.com" 
+                  href="mailto:smartcarddigitalbussines@gmail.com" 
                   className="text-primary hover:underline font-medium"
                 >
-                  suporte@bhonibus.com
+                  smartcarddigitalbussines@gmail.com
                 </a>
               </CardContent>
             </Card>
@@ -206,7 +206,7 @@ const Contact = () => {
               </CardHeader>
               <CardContent>
                 <CardDescription>
-                  Use o formulário acima ou envie um email para contato@bhonibus.com 
+                  Use o formulário acima ou envie um email para smartcarddigitalbussines@gmail.com 
                   com suas sugestões. Valorizamos muito o feedback dos usuários!
                 </CardDescription>
               </CardContent>
@@ -235,7 +235,7 @@ const Contact = () => {
             <h2 className="text-3xl font-bold mb-4">Nossa Localização</h2>
             <p className="text-muted-foreground mb-6">
               Operamos digitalmente servindo toda a Região Metropolitana de Belo Horizonte, 
-              Minas Gerais, Brasil.
+              com sede em São José da Lapa, Minas Gerais, Brasil.
             </p>
             <div className="text-sm text-muted-foreground">
               <p>🌐 Serviço Online 24/7</p>
