@@ -31,12 +31,12 @@ const Landing = () => {
             </Badge>
             
             <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-              Encontre Horários de Ônibus em Belo Horizonte
+              Horários de Ônibus da Região Metropolitana de BH
             </h1>
             
             <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-              Consulte horários de ônibus de BH de forma rápida e fácil. Informações sempre atualizadas 
-              para você não perder mais nenhum ônibus na região metropolitana de Belo Horizonte.
+              Consulte horários de ônibus de toda a região metropolitana de Belo Horizonte. 
+              Cobertura completa para BH, Contagem, Betim, Nova Lima, Ribeirão das Neves e demais cidades da RMBH.
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
@@ -114,7 +114,7 @@ const Landing = () => {
                   </div>
                   <h3 className="text-xl font-semibold mb-2">Cobertura Completa</h3>
                   <p className="text-muted-foreground">
-                    Todas as linhas de ônibus da região metropolitana de Belo Horizonte
+                    Todas as linhas de ônibus da RMBH: BH, Contagem, Betim, Nova Lima, Ribeirão das Neves e mais
                   </p>
                 </CardContent>
               </Card>
@@ -127,7 +127,7 @@ const Landing = () => {
           <div className="container mx-auto px-4">
             <div className="max-w-4xl mx-auto">
               <h2 className="text-3xl font-bold mb-8 text-center">
-                Horários de Ônibus BH - Consulta Rápida e Gratuita
+                Horários de Ônibus RMBH - Região Metropolitana de Belo Horizonte
               </h2>
               
               <div className="grid md:grid-cols-2 gap-8 mb-12">
@@ -156,7 +156,9 @@ const Landing = () => {
                     <Badge variant="outline">Linha 5104 - Pampulha/Centro</Badge>
                     <Badge variant="outline">Linha 9202 - Venda Nova/Centro</Badge>
                     <Badge variant="outline">Linha 1303 - Betim/BH</Badge>
-                    <Badge variant="outline">E centenas de outras linhas...</Badge>
+                    <Badge variant="outline">Linha 6001 - Contagem/BH</Badge>
+                    <Badge variant="outline">Linha 3001 - Nova Lima/BH</Badge>
+                    <Badge variant="outline">E centenas de outras linhas da RMBH...</Badge>
                   </div>
                 </div>
               </div>
@@ -167,7 +169,7 @@ const Landing = () => {
                 </h3>
                 <p className="text-muted-foreground mb-6 max-w-2xl mx-auto">
                   Com o BH Ônibus, você tem acesso instantâneo aos horários de todas as linhas 
-                  de ônibus de Belo Horizonte. Consulte de forma gratuita e sem cadastro.
+                  de ônibus da região metropolitana de BH. Consulte de forma gratuita e sem cadastro.
                 </p>
                 <Link to="/">
                   <Button size="lg">
@@ -191,7 +193,7 @@ const Landing = () => {
               <span className="font-semibold">BH Ônibus</span>
             </div>
             <p className="text-sm text-muted-foreground">
-              Consulte horários de ônibus de Belo Horizonte de forma rápida e gratuita
+              Consulte horários de ônibus da região metropolitana de BH de forma rápida e gratuita
             </p>
             <div className="flex justify-center space-x-6 text-sm">
               <Link to="/sobre" className="text-muted-foreground hover:text-primary">Sobre</Link>
@@ -199,7 +201,7 @@ const Landing = () => {
               <Link to="/privacidade" className="text-muted-foreground hover:text-primary">Privacidade</Link>
             </div>
             <p className="text-xs text-muted-foreground">
-              © 2024 BH Ônibus. Horários de ônibus de Belo Horizonte atualizados diariamente.
+              © 2024 BH Ônibus. Horários de ônibus da RMBH atualizados diariamente.
             </p>
           </div>
         </div>
