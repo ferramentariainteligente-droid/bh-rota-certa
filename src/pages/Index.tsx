@@ -2,7 +2,7 @@ import { Bus, Clock, MapPin, Sparkles } from "lucide-react";
 import { SearchBar } from "@/components/SearchBar";
 import { BusLineCard } from "@/components/BusLineCard";
 import { AdSpace } from "@/components/AdSpace";
-import { BusDataUpdater } from "@/components/BusDataUpdater";
+
 import { useState } from "react";
 import { useBusSearch } from "@/hooks/useBusSearch";
 import busLinesData from "@/data/bus-lines.json";
@@ -33,9 +33,6 @@ const Index = () => {
     hasFilters
   } = useBusSearch(busLines);
 
-  const handleUpdateComplete = (updatedLines: any[]) => {
-    setBusLines(updatedLines);
-  };
 
   const popularHours = ["05", "06", "07", "08", "17", "18", "19", "22"];
 
@@ -91,23 +88,6 @@ const Index = () => {
           </div>
         </section>
 
-      {/* Data Updater Section */}
-      <section className="py-8 px-4 bg-muted/20">
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-6">
-            <h2 className="text-xl font-bold text-foreground mb-2">
-              🔄 Atualizar Horários por Dia da Semana
-            </h2>
-            <p className="text-muted-foreground text-sm">
-              Capture horários detalhados (Segunda-Sexta, Sábado, Domingo/Feriados) dos sites oficiais
-            </p>
-          </div>
-          <BusDataUpdater 
-            busLines={busLines}
-            onUpdateComplete={handleUpdateComplete}
-          />
-        </div>
-      </section>
 
       {/* Ad Space - Top */}
       <AdSpace position="top" />
@@ -187,6 +167,14 @@ const Index = () => {
           </div>
           <div className="border-t mt-6 pt-6 text-center text-sm text-muted-foreground">
             <p>© 2024 BH Ônibus - Todos os direitos reservados</p>
+            <div className="mt-2">
+              <a 
+                href="/admin/login" 
+                className="text-xs text-muted-foreground/50 hover:text-muted-foreground transition-smooth"
+              >
+                Admin
+              </a>
+            </div>
           </div>
         </div>
       </footer>
