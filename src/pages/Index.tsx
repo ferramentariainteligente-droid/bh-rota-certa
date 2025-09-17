@@ -43,7 +43,7 @@ const Index = () => {
               </div>
               <div>
                 <h1 className="text-3xl font-bold text-white">BH Ônibus</h1>
-                <p className="text-white/90 text-sm">Horários de Belo Horizonte</p>
+                <p className="text-white/90 text-sm">Horários de Belo Horizonte e Região Metropolitana</p>
               </div>
             </div>
             
