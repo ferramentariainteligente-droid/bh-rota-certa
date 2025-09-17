@@ -16,7 +16,7 @@ const Landing = () => {
             </div>
             <span className="text-xl font-bold">BH Ônibus</span>
           </div>
-          <Link to="/">
+          <Link to="/horarios">
             <Button variant="outline">Acessar Sistema</Button>
           </Link>
         </nav>
@@ -40,13 +40,24 @@ const Landing = () => {
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
-              <Link to="/">
+              <Link to="/horarios">
                 <Button size="lg" className="w-full sm:w-auto">
                   <Search className="mr-2 h-4 w-4" />
                   Consultar Horários Agora
                 </Button>
               </Link>
-              <Button variant="outline" size="lg" className="w-full sm:w-auto">
+              <Button variant="outline" size="lg" className="w-full sm:w-auto" onClick={() => {
+                if (navigator.share) {
+                  navigator.share({
+                    title: 'BH Ônibus - Horários da RMBH',
+                    text: 'Consulte horários de ônibus da região metropolitana de BH',
+                    url: window.location.href
+                  });
+                } else {
+                  navigator.clipboard.writeText(window.location.href);
+                  alert('Link copiado para a área de transferência!');
+                }
+              }}>
                 <Smartphone className="mr-2 h-4 w-4" />
                 Salvar nos Favoritos
               </Button>
@@ -171,7 +182,7 @@ const Landing = () => {
                   Com o BH Ônibus, você tem acesso instantâneo aos horários de todas as linhas 
                   de ônibus da região metropolitana de BH. Consulte de forma gratuita e sem cadastro.
                 </p>
-                <Link to="/">
+                <Link to="/horarios">
                   <Button size="lg">
                     Começar a usar agora - É grátis!
                   </Button>
