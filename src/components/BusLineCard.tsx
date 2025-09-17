@@ -1,9 +1,12 @@
-import { Clock, MapPin, ExternalLink, Calendar, Info } from "lucide-react";
+import React, { useState } from 'react';
+import { Clock, MapPin, ExternalLink, Calendar, Info, AlertTriangle } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BusDataExtractor } from "@/services/BusDataExtractor";
 import { ScheduleAlert } from "@/components/ScheduleAlert";
+import { ReportErrorForm } from "./ReportErrorForm";
 
 interface ExtractedSchedule {
   tipo: string;
@@ -16,6 +19,8 @@ interface BusLine {
   horarios: string[];
   schedulesDetailed?: ExtractedSchedule[];
   lastUpdated?: string;
+  line_url?: string;
+  line_name?: string;
 }
 
 interface BusLineCardProps {
@@ -23,6 +28,7 @@ interface BusLineCardProps {
 }
 
 export const BusLineCard = ({ line }: BusLineCardProps) => {
+  const [showReportForm, setShowReportForm] = useState(false);
   // Extract line number and route from the title
   const parseLineInfo = (linha: string) => {
     const match = linha.match(/^(\d+[A-Z]?)\s+(.+?)\s+–/);
@@ -128,6 +134,7 @@ export const BusLineCard = ({ line }: BusLineCardProps) => {
   }
 
   return (
+    <>
     <Card className="hover:shadow-soft transition-smooth group">
       <CardContent className="p-6">
         <div className="flex items-start justify-between mb-4">
@@ -219,13 +226,33 @@ export const BusLineCard = ({ line }: BusLineCardProps) => {
             <MapPin className="h-3 w-3" />
             <span>Move Metropolitano</span>
           </div>
-          {line.lastUpdated && (
-            <div className="text-xs text-muted-foreground">
-              Atualizado em {new Date(line.lastUpdated).toLocaleDateString('pt-BR')}
-            </div>
-          )}
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowReportForm(true)}
+              className="text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+            >
+              <AlertTriangle className="h-4 w-4 mr-1" />
+              Reportar Erro
+            </Button>
+            {line.lastUpdated && (
+              <div className="text-xs text-muted-foreground">
+                Atualizado em {new Date(line.lastUpdated).toLocaleDateString('pt-BR')}
+              </div>
+            )}
+          </div>
         </div>
       </CardContent>
     </Card>
+    
+    {showReportForm && (
+      <ReportErrorForm
+        lineUrl={line.line_url || line.url}
+        lineName={line.line_name || line.linha}
+        onClose={() => setShowReportForm(false)}
+      />
+    )}
+    </>
   );
 };

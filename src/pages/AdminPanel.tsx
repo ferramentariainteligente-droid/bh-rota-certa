@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import { useIntegratedBusData } from '@/hooks/useIntegratedBusData';
 import { AdSenseManager } from '@/components/AdSenseManager';
+import { ReportsManagement } from '@/components/ReportsManagement';
 import busLinesData from '@/data/bus-lines.json';
 
 interface ExtractedSchedule {
@@ -143,12 +144,15 @@ const AdminPanel = () => {
 
       <main className="container mx-auto px-4 py-8">
         <Tabs defaultValue="dataset" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 mb-8">
+          <TabsList className="grid w-full grid-cols-4 mb-8">
             <TabsTrigger value="dataset" className="text-sm md:text-base">
               📊 Dataset Manual
             </TabsTrigger>
             <TabsTrigger value="scraping" className="text-sm md:text-base">
               🕷️ Scraping Automático
+            </TabsTrigger>
+            <TabsTrigger value="reports" className="text-sm md:text-base">
+              📝 Relatórios
             </TabsTrigger>
             <TabsTrigger value="adsense" className="text-sm md:text-base">
               💰 Google AdSense
@@ -371,6 +375,10 @@ const AdminPanel = () => {
 
       <TabsContent value="scraping">
         <ScrapingManager />
+      </TabsContent>
+
+      <TabsContent value="reports">
+        <ReportsManagement />
       </TabsContent>
 
       <TabsContent value="adsense">
