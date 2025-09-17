@@ -2,6 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Hide any legacy "Dados JSON" buttons */
+button:contains("Dados JSON"),
+[class*="dados-json"],
+button[aria-label*="Dados JSON"] {
+  display: none !important;
+}
+
 /* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
 All colors MUST be HSL.
 */
