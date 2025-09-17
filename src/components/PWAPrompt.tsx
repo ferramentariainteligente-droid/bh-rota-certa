@@ -8,13 +8,25 @@ import { useNotifications } from '@/hooks/useNotifications';
 
 export const PWAPrompt = () => {
   const [isVisible, setIsVisible] = useState(true);
+  const [hasInteracted, setHasInteracted] = useState(false);
   const { isInstallable, isInstalled, installApp } = usePWA();
   const { permission, isSupported, requestPermission, sendTestNotification } = useNotifications();
 
-  // Don't show if app is already installed or not installable
-  if (isInstalled || (!isInstallable && permission === 'granted') || !isVisible) {
+  // Don't show if app is already installed, or if user dismissed notifications
+  if (isInstalled || (!isInstallable && permission !== 'default') || !isVisible) {
     return null;
   }
+
+  // Only show notification options after user shows interest in PWA
+  const handleInstallClick = async () => {
+    setHasInteracted(true);
+    await installApp();
+  };
+
+  const handleNotificationClick = async () => {
+    setHasInteracted(true);
+    await requestPermission();
+  };
 
   return (
     <Card className="fixed bottom-4 right-4 w-80 shadow-lg z-50 border-primary/20">
@@ -53,21 +65,21 @@ export const PWAPrompt = () => {
 
         <div className="space-y-2">
           {isInstallable && (
-            <Button onClick={installApp} className="w-full" size="sm">
+            <Button onClick={handleInstallClick} className="w-full" size="sm">
               <Download className="h-4 w-4 mr-2" />
               Instalar App
             </Button>
           )}
           
-          {isSupported && permission !== 'granted' && (
+          {hasInteracted && isSupported && permission === 'default' && (
             <Button 
-              onClick={requestPermission} 
+              onClick={handleNotificationClick} 
               variant="outline" 
               className="w-full" 
               size="sm"
             >
               <Bell className="h-4 w-4 mr-2" />
-              Ativar Notificações
+              Ativar Notificações (Opcional)
             </Button>
           )}
 

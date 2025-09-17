@@ -18,11 +18,6 @@ export const useNotifications = () => {
 
   const requestPermission = async () => {
     if (!isSupported) {
-      toast({
-        title: "Notificações não suportadas",
-        description: "Seu navegador não suporta notificações.",
-        variant: "destructive"
-      });
       return false;
     }
 
@@ -32,26 +27,16 @@ export const useNotifications = () => {
       
       if (result === 'granted') {
         toast({
-          title: "Notificações habilitadas!",
+          title: "Notificações ativadas!",
           description: "Você receberá atualizações sobre horários de ônibus."
         });
-        
         return true;
       } else {
-        toast({
-          title: "Notificações negadas",
-          description: "Você pode habilitar notificações nas configurações do navegador.",
-          variant: "destructive"
-        });
+        // Don't show error toast for denied permissions - user choice
         return false;
       }
     } catch (error) {
       console.error('Error requesting notification permission:', error);
-      toast({
-        title: "Erro ao solicitar permissão",
-        description: "Tente habilitar notificações manualmente nas configurações do navegador.",
-        variant: "destructive"
-      });
       return false;
     }
   };
