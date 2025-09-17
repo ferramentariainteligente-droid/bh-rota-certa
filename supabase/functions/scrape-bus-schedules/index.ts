@@ -6,6 +6,140 @@ const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+// Enhanced scraping function to extract structured schedule data
+async function scrapeBusSchedules(url: string): Promise<{
+  success: boolean;
+  schedules: Array<{ tipo: string; horarios: string[] }>;
+  error?: string;
+}> {
+  try {
+    console.log(`Scraping URL: ${url}`);
+    
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const html = await response.text();
+    console.log(`Fetched HTML, length: ${html.length} chars`);
+    
+    return extractScheduleData(html);
+    
+  } catch (error) {
+    console.error(`Error scraping ${url}:`, error);
+    return {
+      success: false,
+      schedules: [],
+      error: error.message
+    };
+  }
+}
+
+function extractScheduleData(html: string): {
+  success: boolean;
+  schedules: Array<{ tipo: string; horarios: string[] }>;
+  error?: string;
+} {
+  try {
+    const schedules: Array<{ tipo: string; horarios: string[] }> = [];
+    
+    // Parse HTML to extract structured schedule data
+    // Look for the schedule container div
+    const schedulesMatch = html.match(/<div class="horarios">([\s\S]*?)<\/div>/);
+    if (!schedulesMatch) {
+      console.log('No schedule container found');
+      return { success: false, schedules: [], error: 'Schedule container not found' };
+    }
+
+    const schedulesHtml = schedulesMatch[1];
+    
+    // Extract each schedule type section (diasemana divs)
+    const scheduleTypeRegex = /<div class="diasemana[^"]*">([\s\S]*?)<\/div>/g;
+    let match;
+    
+    while ((match = scheduleTypeRegex.exec(schedulesHtml)) !== null) {
+      const sectionHtml = match[1];
+      
+      // Extract the schedule type name from div-semana
+      const typeMatch = sectionHtml.match(/<div class="div-semana">([^<]+)<\/div>/);
+      if (!typeMatch) continue;
+      
+      const scheduleType = typeMatch[1].trim();
+      
+      // Extract all times from div-hora elements
+      const timeRegex = /<div class="div-hora">([^<]+)(?:<sup>[^<]*<\/sup>)?<\/div>/g;
+      const horarios: string[] = [];
+      let timeMatch;
+      
+      while ((timeMatch = timeRegex.exec(sectionHtml)) !== null) {
+        const time = timeMatch[1].trim();
+        // Clean up time format (remove any extra characters)
+        const cleanTime = time.replace(/[^\d:]/g, '');
+        if (/^\d{1,2}:\d{2}$/.test(cleanTime)) {
+          horarios.push(cleanTime);
+        }
+      }
+      
+      if (horarios.length > 0) {
+        // Map schedule types to standardized names
+        const tipo = mapScheduleType(scheduleType);
+        schedules.push({ tipo, horarios });
+        console.log(`Extracted ${scheduleType} -> ${tipo}: ${horarios.length} times`);
+      }
+    }
+    
+    if (schedules.length === 0) {
+      console.log('No schedules extracted');
+      return { success: false, schedules: [], error: 'No schedule data found' };
+    }
+    
+    console.log(`Successfully extracted ${schedules.length} schedule types`);
+    return { success: true, schedules };
+    
+  } catch (error) {
+    console.error('Error extracting schedule data:', error);
+    return { success: false, schedules: [], error: error.message };
+  }
+}
+
+function mapScheduleType(rawType: string): string {
+  const normalized = rawType.toLowerCase().trim();
+  
+  // Map various schedule type formats to standardized names
+  if (normalized.includes('dias úteis') && normalized.includes('atípico')) {
+    return 'dias_uteis_atipico';
+  }
+  if (normalized.includes('dias úteis') && normalized.includes('férias')) {
+    return 'dias_uteis_ferias';
+  }
+  if (normalized.includes('dias úteis')) {
+    return 'dias_uteis';
+  }
+  if (normalized.includes('sábado') && normalized.includes('atípico')) {
+    return 'sabado_atipico';
+  }
+  if (normalized.includes('sábado') && normalized.includes('férias')) {
+    return 'sabado_ferias';
+  }
+  if (normalized.includes('sábado')) {
+    return 'sabado';
+  }
+  if (normalized.includes('domingo') && normalized.includes('feriado')) {
+    return 'domingo_feriado';
+  }
+  if (normalized.includes('quarta') && normalized.includes('cinzas')) {
+    return 'quarta_cinzas';
+  }
+  
+  // Fallback to a sanitized version
+  return normalized.replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
+}
+
 Deno.serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -13,11 +147,32 @@ Deno.serve(async (req) => {
   }
 
   try {
-    console.log('Scraping bus schedules function called');
-    const { source_ids = [], force_refresh = false } = await req.json().catch(() => ({}));
+    console.log('Enhanced scraping function called');
+    const { source_ids = [], force_refresh = false, test_url } = await req.json().catch(() => ({}));
     const executionId = crypto.randomUUID();
 
-    console.log(`Starting bus schedule scraping - Execution ID: ${executionId}`);
+    console.log(`Starting enhanced bus schedule scraping - Execution ID: ${executionId}`);
+
+    // If test_url is provided, just test that URL
+    if (test_url) {
+      console.log(`Testing single URL: ${test_url}`);
+      const result = await scrapeBusSchedules(test_url);
+      
+      return new Response(
+        JSON.stringify({
+          success: result.success,
+          execution_id: executionId,
+          test_result: result,
+          message: result.success ? 
+            `Successfully scraped ${result.schedules.length} schedule types` : 
+            `Failed to scrape: ${result.error}`
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: result.success ? 200 : 400
+        }
+      );
+    }
 
     // Get active scraping sources
     let sourcesQuery = supabase
@@ -67,100 +222,97 @@ Deno.serve(async (req) => {
       console.error('Start log error:', startLogError);
     }
 
-    // Process each source (simplified version for now)
+    // Get bus lines to scrape from our JSON data
+    const busLinesToScrape = [
+      "https://movemetropolitano.com.br/4211-terminal-sao-benedito-circular-conjunto-cristina",
+      "https://movemetropolitano.com.br/5889-vila-maria-terminal-vilarinho",
+      "https://movemetropolitano.com.br/402h-terminal-sao-gabriel-hospitais"
+    ];
+
     let totalProcessed = 0;
     let totalLines = 0;
+    let totalSuccessful = 0;
+    let totalFailed = 0;
 
-    for (const source of sources) {
-      console.log(`Processing source: ${source.name}`);
+    // Process each bus line URL
+    for (const url of busLinesToScrape.slice(0, 3)) { // Limit for testing
+      console.log(`Processing URL: ${url}`);
       
       try {
-        // Simulate processing - replace with actual scraping later
-        const simulatedLines = Math.floor(Math.random() * 50) + 10; // 10-60 lines
-        const processedLines = Math.floor(simulatedLines * 0.8); // 80% success rate
-        const failedLines = simulatedLines - processedLines;
+        const result = await scrapeBusSchedules(url);
         
-        await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate work
-        
-        // Insert some test data
-        const testSchedules = [
-          {
-            tipo: 'dias_uteis',
-            horarios: ['05:30', '06:00', '06:30', '07:00', '07:30', '08:00', '08:30']
-          },
-          {
-            tipo: 'sabado', 
-            horarios: ['06:00', '07:00', '08:00', '09:00', '10:00']
-          },
-          {
-            tipo: 'domingo_feriado',
-            horarios: ['07:00', '08:00', '09:00', '10:00']
-          }
-        ];
-
-        // Create some sample scraped lines
-        for (let i = 1; i <= 3; i++) {
+        if (result.success && result.schedules.length > 0) {
+          // Extract line info from URL
+          const pathParts = new URL(url).pathname.split('-');
+          const lineCode = pathParts[0].replace('/', '');
+          const lineName = pathParts.slice(1).join(' ').replace(/-/g, ' ');
+          
+          // Save to database
           const { error: lineError } = await supabase.from('scraped_bus_lines').upsert({
-            source_id: source.id,
-            line_code: `${100 + i}`,
-            line_name: `Linha Teste ${i}`,
-            line_url: `${source.base_url}/linha-${100 + i}`,
-            route_description: `Linha ${100 + i} - Rota de teste`,
+            source_id: sources[0].id, // Use first source for now
+            line_code: lineCode,
+            line_name: lineName,
+            line_url: url,
+            route_description: lineName,
             last_scraped_at: new Date().toISOString(),
             scraping_status: 'success',
-            schedule_data: { schedules: testSchedules },
+            schedule_data: { schedules: result.schedules },
             metadata: {
-              schedules_count: testSchedules.length,
-              total_times: testSchedules.reduce((acc, s) => acc + s.horarios.length, 0)
+              schedules_count: result.schedules.length,
+              total_times: result.schedules.reduce((acc, s) => acc + s.horarios.length, 0),
+              scraping_method: 'enhanced_html_parser'
             }
           }, {
-            onConflict: 'source_id,line_url'
+            onConflict: 'line_url'
           });
 
           if (lineError) {
             console.error('Line insert error:', lineError);
+            totalFailed++;
+          } else {
+            totalSuccessful++;
+            console.log(`Successfully saved ${lineCode} with ${result.schedules.length} schedule types`);
           }
+        } else {
+          console.log(`Failed to scrape ${url}: ${result.error}`);
+          totalFailed++;
         }
         
-        // Log completion for this source
-        const { error: sourceLogError } = await supabase.from('scraping_logs').insert({
-          source_id: source.id,
-          execution_id: executionId,
-          status: 'completed',
-          lines_found: simulatedLines,
-          lines_processed: simulatedLines,
-          lines_updated: processedLines,
-          lines_failed: failedLines,
-          completed_at: new Date().toISOString(),
-          execution_details: {
-            source_name: source.name,
-            processing_summary: {
-              total_found: simulatedLines,
-              successfully_processed: processedLines,
-              failed: failedLines
-            }
-          }
-        });
-
-        if (sourceLogError) {
-          console.error('Source log error:', sourceLogError);
-        }
-
         totalProcessed++;
-        totalLines += simulatedLines;
-
-      } catch (sourceError) {
-        console.error(`Error processing source ${source.name}:`, sourceError);
+        totalLines++;
         
-        // Log error for this source
-        await supabase.from('scraping_logs').insert({
-          source_id: source.id,
-          execution_id: executionId,
-          status: 'error',
-          error_message: sourceError.message,
-          completed_at: new Date().toISOString()
-        });
+        // Add delay between requests
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+      } catch (error) {
+        console.error(`Error processing ${url}:`, error);
+        totalFailed++;
+        totalProcessed++;
       }
+    }
+
+    // Log completion
+    const { error: completeLogError } = await supabase.from('scraping_logs').insert({
+      source_id: sources[0].id,
+      execution_id: executionId,
+      status: 'completed',
+      lines_found: totalLines,
+      lines_processed: totalProcessed,
+      lines_updated: totalSuccessful,
+      lines_failed: totalFailed,
+      completed_at: new Date().toISOString(),
+      execution_details: {
+        enhanced_scraping: true,
+        processing_summary: {
+          total_urls_processed: totalProcessed,
+          successful_scrapes: totalSuccessful,
+          failed_scrapes: totalFailed
+        }
+      }
+    });
+
+    if (completeLogError) {
+      console.error('Complete log error:', completeLogError);
     }
 
     // Update source timestamps
@@ -171,20 +323,20 @@ Deno.serve(async (req) => {
         .eq('id', source.id);
     }
 
-    console.log(`Scraping execution completed - ID: ${executionId}, processed ${totalProcessed} sources, ${totalLines} total lines`);
+    console.log(`Enhanced scraping completed - ID: ${executionId}, processed ${totalProcessed} URLs, ${totalSuccessful} successful`);
 
     return new Response(
       JSON.stringify({
         success: true,
         execution_id: executionId,
-        sources_processed: totalProcessed,
+        sources_processed: sources.length,
         statistics: {
           total_lines_found: totalLines,
-          total_lines_processed: totalLines,
-          total_lines_updated: Math.floor(totalLines * 0.8),
-          total_lines_failed: Math.floor(totalLines * 0.2)
+          total_lines_processed: totalProcessed,
+          total_lines_updated: totalSuccessful,
+          total_lines_failed: totalFailed
         },
-        message: `Successfully processed ${totalProcessed} sources with ${totalLines} lines (demo data)`
+        message: `Successfully processed ${totalProcessed} URLs with ${totalSuccessful} successful scrapes`
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -193,7 +345,7 @@ Deno.serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Error in scrape-bus-schedules function:', error);
+    console.error('Error in enhanced scrape-bus-schedules function:', error);
     return new Response(
       JSON.stringify({ 
         success: false, 
