@@ -44,6 +44,57 @@ export type Database = {
         }
         Relationships: []
       }
+      bus_reports: {
+        Row: {
+          admin_response: string | null
+          admin_user_id: string | null
+          created_at: string
+          id: string
+          line_name: string
+          line_url: string
+          report_type: Database["public"]["Enums"]["report_type"]
+          resolved_at: string | null
+          status: Database["public"]["Enums"]["report_status"]
+          suggested_correction: string | null
+          updated_at: string
+          user_contact: string | null
+          user_email: string | null
+          user_message: string
+        }
+        Insert: {
+          admin_response?: string | null
+          admin_user_id?: string | null
+          created_at?: string
+          id?: string
+          line_name: string
+          line_url: string
+          report_type: Database["public"]["Enums"]["report_type"]
+          resolved_at?: string | null
+          status?: Database["public"]["Enums"]["report_status"]
+          suggested_correction?: string | null
+          updated_at?: string
+          user_contact?: string | null
+          user_email?: string | null
+          user_message: string
+        }
+        Update: {
+          admin_response?: string | null
+          admin_user_id?: string | null
+          created_at?: string
+          id?: string
+          line_name?: string
+          line_url?: string
+          report_type?: Database["public"]["Enums"]["report_type"]
+          resolved_at?: string | null
+          status?: Database["public"]["Enums"]["report_status"]
+          suggested_correction?: string | null
+          updated_at?: string
+          user_contact?: string | null
+          user_email?: string | null
+          user_message?: string
+        }
+        Relationships: []
+      }
       bus_schedules: {
         Row: {
           bus_line_id: string
@@ -223,7 +274,13 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      report_status: "pendente" | "analisando" | "resolvido" | "rejeitado"
+      report_type:
+        | "horario_incorreto"
+        | "linha_nao_funciona"
+        | "horario_em_falta"
+        | "informacao_desatualizada"
+        | "outro"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -350,6 +407,15 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      report_status: ["pendente", "analisando", "resolvido", "rejeitado"],
+      report_type: [
+        "horario_incorreto",
+        "linha_nao_funciona",
+        "horario_em_falta",
+        "informacao_desatualizada",
+        "outro",
+      ],
+    },
   },
 } as const
