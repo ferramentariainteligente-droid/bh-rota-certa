@@ -55,51 +55,85 @@ function extractScheduleData(html: string): {
       sections_found: 0
     };
     
-    // Parse HTML to extract structured schedule data
-    const schedulesMatch = html.match(/<div class="horarios">([\s\S]*?)<\/div>/);
-    if (!schedulesMatch) {
-      // Try alternative patterns
-      const altMatch = html.match(/<div[^>]*class="[^"]*schedule[^"]*"[^>]*>([\s\S]*?)<\/div>/i);
-      if (!altMatch) {
-        console.log('No schedule container found');
-        return { 
-          success: false, 
-          schedules: [], 
-          error: 'Schedule container not found',
-          metadata
-        };
-      }
-      console.log('Found alternative schedule container');
+    // Find the horarios container
+    const horariosMatch = html.match(/<div class="horarios">([\s\S]*?)(?=<div class="pub"|<\/div>\s*<\/div>|$)/);
+    if (!horariosMatch) {
+      console.log('No horarios container found');
+      return { 
+        success: false, 
+        schedules: [], 
+        error: 'Horarios container not found',
+        metadata
+      };
     }
 
     metadata.schedule_container_found = true;
-    const schedulesHtml = schedulesMatch ? schedulesMatch[1] : html;
+    const horariosHtml = horariosMatch[1];
+    console.log(`Found horarios container with ${horariosHtml.length} chars`);
     
-    // Extract each schedule type section (diasemana divs)
-    const scheduleTypeRegex = /<div class="diasemana[^"]*">([\s\S]*?)<\/div>/g;
-    let match;
+    // Extract each diasemana div with better regex that handles nested structure
+    const sections = [];
+    let currentPos = 0;
     
-    while ((match = scheduleTypeRegex.exec(schedulesHtml)) !== null) {
+    // Find all div diasemana starting positions
+    const diasemanaStart = /<div class="diasemana[^"]*"[^>]*>/g;
+    let startMatch;
+    
+    while ((startMatch = diasemanaStart.exec(horariosHtml)) !== null) {
+      const startPos = startMatch.index;
+      const startTag = startMatch[0];
+      
+      // Find the matching closing div by counting nested divs
+      let divCount = 1;
+      let endPos = startPos + startTag.length;
+      
+      while (divCount > 0 && endPos < horariosHtml.length) {
+        const nextDiv = horariosHtml.substring(endPos).match(/<\/?div[^>]*>/);
+        if (!nextDiv) break;
+        
+        endPos += nextDiv.index! + nextDiv[0].length;
+        if (nextDiv[0].startsWith('</div>')) {
+          divCount--;
+        } else if (nextDiv[0].startsWith('<div')) {
+          divCount++;
+        }
+      }
+      
+      if (divCount === 0) {
+        const sectionContent = horariosHtml.substring(startPos, endPos - 6); // Remove </div>
+        sections.push(sectionContent);
+      }
+    }
+    
+    console.log(`Found ${sections.length} diasemana sections`);
+    
+    for (const sectionHtml of sections) {
       metadata.sections_found++;
-      const sectionHtml = match[1];
       
       // Extract the schedule type name from div-semana
       const typeMatch = sectionHtml.match(/<div class="div-semana">([^<]+)<\/div>/);
-      if (!typeMatch) continue;
+      if (!typeMatch) {
+        console.log('No type match found in section');
+        continue;
+      }
       
       const scheduleType = typeMatch[1].trim();
+      console.log(`Processing schedule type: "${scheduleType}"`);
       
-      // Extract all times from div-hora elements
+      // Extract all times from div-hora elements, handling <sup> tags
       const timeRegex = /<div class="div-hora">([^<]+)(?:<sup>[^<]*<\/sup>)?<\/div>/g;
       const horarios: string[] = [];
       let timeMatch;
       
       while ((timeMatch = timeRegex.exec(sectionHtml)) !== null) {
-        const time = timeMatch[1].trim();
-        // Clean up time format (remove any extra characters)
+        let time = timeMatch[1].trim();
+        console.log(`Found raw time: "${time}"`);
+        
+        // Clean up time format (keep only digits and colon)
         const cleanTime = time.replace(/[^\d:]/g, '');
         if (/^\d{1,2}:\d{2}$/.test(cleanTime)) {
           horarios.push(cleanTime);
+          console.log(`Added clean time: "${cleanTime}"`);
         }
       }
       
@@ -107,7 +141,9 @@ function extractScheduleData(html: string): {
         // Map schedule types to standardized names
         const tipo = mapScheduleType(scheduleType);
         schedules.push({ tipo, horarios });
-        console.log(`Extracted ${scheduleType} -> ${tipo}: ${horarios.length} times`);
+        console.log(`Extracted "${scheduleType}" -> "${tipo}": [${horarios.join(', ')}]`);
+      } else {
+        console.log(`No valid times found for "${scheduleType}"`);
       }
     }
     
@@ -156,6 +192,9 @@ function mapScheduleType(rawType: string): string {
   }
   if (normalized.includes('sábado')) {
     return 'sabado';
+  }
+  if (normalized.includes('domingos e feriados') && normalized.includes('atípico')) {
+    return 'domingo_feriado_atipico';
   }
   if (normalized.includes('domingo') && normalized.includes('feriado')) {
     return 'domingo_feriado';
