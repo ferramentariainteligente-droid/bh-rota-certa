@@ -138,78 +138,48 @@ export const BusDataUpdater = ({ busLines, onUpdateComplete }: BusDataUpdaterPro
     setCompletedLines(0);
     setFailedLines(0);
     
-  const validLines = busLines.filter(line => 
-    line.url && 
-    line.url.trim() !== '' &&
-    (line.url.startsWith('http') || line.url.startsWith('www'))
-  );
-
-  const skippedLines = busLines.filter(line => 
-    !line.url || 
-    line.url.trim() === '' ||
-    (!line.url.startsWith('http') && !line.url.startsWith('www'))
-  );
-
-  console.log(`Total de linhas: ${busLines.length}`);
-  console.log(`Linhas válidas: ${validLines.length}`);
-  console.log(`Linhas ignoradas: ${skippedLines.length}`);
-  console.log('Exemplos de linhas ignoradas:', skippedLines.slice(0, 5).map(l => ({ linha: l.linha, url: l.url })));
-
-    const totalLines = validLines.length;
-    const updatedLines = [...busLines];
-    
     try {
-        // Process in batches
-        for (let i = 0; i < validLines.length; i += batchSize) {
-        if (isPaused) break;
+      setCurrentLine('Enviando dados para processamento no servidor...');
+      
+      const response = await fetch('/functions/v1/process-bus-data', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          busLines: busLines,
+          batchSize: batchSize
+        })
+      });
 
-        const batch = validLines.slice(i, i + batchSize);
-        setCurrentLine(`Processando lote ${Math.floor(i/batchSize) + 1} de ${Math.ceil(validLines.length/batchSize)}`);
-        
-        const batchResults = await processBatch(batch, Math.floor(i/batchSize));
-        
-        // Update the results
-        batchResults.forEach((result, batchIndex) => {
-          if (result) {
-            const originalIndex = busLines.findIndex(line => line.url === batch[batchIndex].url);
-            if (originalIndex !== -1) {
-              updatedLines[originalIndex] = result;
-              if (result.schedulesDetailed) {
-                setCompletedLines(prev => prev + 1);
-              } else {
-                setFailedLines(prev => prev + 1);
-              }
-            }
-          }
-        });
+      const result = await response.json();
 
-        setProgress(Math.min(((i + batch.length) / totalLines) * 100, 100));
+      if (result.success) {
+        setProgress(100);
+        setCompletedLines(result.stats.completed);
+        setFailedLines(result.stats.failed);
         
-        // Small delay between batches to avoid overwhelming servers
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      }
-
-      if (!isPaused) {
         toast({
-          title: "✅ Atualização Concluída",
-          description: `${completedLines} linhas atualizadas com horários detalhados, ${failedLines} falharam.`,
+          title: "✅ Atualização Concluída (Servidor)",
+          description: `${result.stats.completed} linhas atualizadas, ${result.stats.failed} falharam.`,
         });
-        onUpdateComplete?.(updatedLines);
+        
+        onUpdateComplete?.(result.data);
+      } else {
+        throw new Error(result.error || 'Erro no servidor');
       }
 
     } catch (error) {
-      console.error('Error during full update:', error);
+      console.error('Error during backend update:', error);
       toast({
         title: "❌ Erro na Atualização",
-        description: "Erro durante o processamento. Tente novamente.",
+        description: "Erro no processamento do servidor. Tente novamente.",
         variant: "destructive"
       });
     } finally {
-      if (!isPaused) {
-        setIsUpdating(false);
-        setProgress(0);
-        setCurrentLine('');
-      }
+      setIsUpdating(false);
+      setProgress(0);
+      setCurrentLine('');
     }
   };
 
@@ -286,7 +256,7 @@ export const BusDataUpdater = ({ busLines, onUpdateComplete }: BusDataUpdaterPro
               size="lg"
             >
               <RefreshCw className="h-4 w-4 mr-2" />
-              Processar Todas as {validLines} Linhas
+              Processar no Servidor ({validLines} linhas)
             </Button>
           ) : (
             <Button 
@@ -310,16 +280,16 @@ export const BusDataUpdater = ({ busLines, onUpdateComplete }: BusDataUpdaterPro
           </Button>
         </div>
 
-        <div className="text-sm text-muted-foreground bg-muted/50 p-3 rounded">
-          <p><strong>🚀 Recursos do Sistema Automático:</strong></p>
-          <ul className="list-disc list-inside space-y-1 mt-2">
-            <li>Processa {validLines} linhas em lotes de {batchSize} simultaneamente</li>
-            <li>Extrai horários para Dias Úteis, Sábados, Domingos/Feriados</li>
-            <li>Sistema de pausa/retomada para controle do usuário</li>
-            <li>Estatísticas em tempo real do progresso</li>
-            <li>Download automático do JSON atualizado</li>
-          </ul>
-        </div>
+          <div className="text-sm text-muted-foreground bg-muted/50 p-3 rounded">
+            <p><strong>🚀 Processamento no Servidor:</strong></p>
+            <ul className="list-disc list-inside space-y-1 mt-2">
+              <li>Processa {validLines} linhas válidas no backend</li>
+              <li>Extrai horários para Dias Úteis, Sábados, Domingos/Feriados</li>
+              <li>Processamento otimizado e mais rápido</li>
+              <li>Não sobrecarrega o navegador do usuário</li>
+              <li>Download automático do JSON atualizado</li>
+            </ul>
+          </div>
       </CardContent>
     </Card>
   );
