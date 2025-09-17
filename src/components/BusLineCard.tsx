@@ -1,6 +1,7 @@
-import { Clock, MapPin, ExternalLink, Calendar } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Clock, MapPin, ExternalLink, Calendar, Info } from "lucide-react";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BusDataExtractor } from "@/services/BusDataExtractor";
 
 interface ExtractedSchedule {
@@ -58,29 +59,72 @@ export const BusLineCard = ({ line }: BusLineCardProps) => {
     return periods;
   };
 
-  // Use detailed schedules if available, otherwise fall back to simple horarios
-  const currentScheduleType = BusDataExtractor.getCurrentScheduleType();
-  const currentSchedule = line.schedulesDetailed 
-    ? BusDataExtractor.getRelevantSchedule(line.schedulesDetailed)
-    : null;
-  
-  const displayHorarios = currentSchedule ? currentSchedule.horarios : line.horarios;
-  const scheduleGroups = groupSchedules(displayHorarios);
-  
-  const nextDeparture = displayHorarios.find(horario => {
-    const now = new Date();
-    const [hour, minute] = horario.split(':').map(Number);
-    const departureTime = new Date();
-    departureTime.setHours(hour, minute, 0, 0);
-    return departureTime > now;
-  });
-
   const periodLabels = {
     madrugada: '🌙 Madrugada',
     manha: '🌅 Manhã',
     tarde: '☀️ Tarde',
     noite: '🌆 Noite'
   };
+
+  // Get current schedule type to determine default tab
+  const currentScheduleType = BusDataExtractor.getCurrentScheduleType();
+  
+  // Render schedule periods
+  const renderSchedulePeriods = (horarios: string[]) => {
+    const scheduleGroups = groupSchedules(horarios);
+    const nextDeparture = horarios.find(horario => {
+      const now = new Date();
+      const [hour, minute] = horario.split(':').map(Number);
+      const departureTime = new Date();
+      departureTime.setHours(hour, minute, 0, 0);
+      return departureTime > now;
+    });
+
+    return (
+      <div className="space-y-3">
+        {Object.entries(scheduleGroups).map(([period, times]) => {
+          if (times.length === 0) return null;
+          
+          return (
+            <div key={period}>
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-sm font-medium text-muted-foreground">
+                  {periodLabels[period as keyof typeof periodLabels]}
+                </span>
+                <div className="flex-1 h-px bg-border"></div>
+                <span className="text-xs text-muted-foreground">
+                  {times.length} horários
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {times.map((horario, index) => (
+                  <span
+                    key={index}
+                    className={`px-2 py-1 rounded text-sm font-mono transition-smooth ${
+                      horario === nextDeparture
+                        ? "bg-success/10 text-success border border-success/20"
+                        : "bg-muted hover:bg-muted/80 text-muted-foreground"
+                    }`}
+                  >
+                    {horario}
+                  </span>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  // Determine default tab based on current day
+  let defaultTab = "dias_uteis";
+  if (line.schedulesDetailed) {
+    const relevantSchedule = BusDataExtractor.getRelevantSchedule(line.schedulesDetailed);
+    if (relevantSchedule) {
+      defaultTab = relevantSchedule.tipo;
+    }
+  }
 
   return (
     <Card className="hover:shadow-soft transition-smooth group">
@@ -91,18 +135,10 @@ export const BusLineCard = ({ line }: BusLineCardProps) => {
               <Badge variant="secondary" className="text-lg font-bold px-3 py-1">
                 {number}
               </Badge>
-              {nextDeparture && (
-                <Badge variant="outline" className="text-success border-success/20 bg-success/5">
-                  <Clock className="h-3 w-3 mr-1" />
-                  Próximo: {nextDeparture}
-                </Badge>
-              )}
-              {currentSchedule && (
-                <Badge variant="outline" className="text-primary border-primary/20 bg-primary/5">
-                  <Calendar className="h-3 w-3 mr-1" />
-                  {BusDataExtractor.getScheduleTypeLabel(currentSchedule.tipo)}
-                </Badge>
-              )}
+              <Badge variant="outline" className="text-blue-600 border-blue-200 bg-blue-50">
+                <Info className="h-3 w-3 mr-1" />
+                {line.schedulesDetailed ? `${line.schedulesDetailed.length} tipos de horário` : 'Horário geral'}
+              </Badge>
             </div>
             <h3 className="font-semibold text-lg group-hover:text-primary transition-smooth">
               {route}
@@ -119,53 +155,70 @@ export const BusLineCard = ({ line }: BusLineCardProps) => {
           </a>
         </div>
 
-        <div className="space-y-4">
-          {Object.entries(scheduleGroups).map(([period, times]) => {
-            if (times.length === 0) return null;
+        {/* Schedule Display */}
+        {line.schedulesDetailed && line.schedulesDetailed.length > 0 ? (
+          <Tabs defaultValue={defaultTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-3 mb-4">
+              {line.schedulesDetailed.map((schedule) => (
+                <TabsTrigger 
+                  key={schedule.tipo} 
+                  value={schedule.tipo}
+                  className="text-xs"
+                >
+                  {BusDataExtractor.getScheduleTypeLabel(schedule.tipo)}
+                </TabsTrigger>
+              ))}
+            </TabsList>
             
-            return (
-              <div key={period}>
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-sm font-medium text-muted-foreground">
-                    {periodLabels[period as keyof typeof periodLabels]}
-                  </span>
-                  <div className="flex-1 h-px bg-border"></div>
-                  <span className="text-xs text-muted-foreground">
-                    {times.length} horários
-                  </span>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {times.map((horario, index) => (
-                    <span
-                      key={index}
-                      className={`px-2 py-1 rounded text-sm font-mono transition-smooth ${
-                        horario === nextDeparture
-                          ? "bg-success/10 text-success border border-success/20"
-                          : "bg-muted hover:bg-muted/80 text-muted-foreground"
-                      }`}
-                    >
-                      {horario}
+            {line.schedulesDetailed.map((schedule) => (
+              <TabsContent key={schedule.tipo} value={schedule.tipo} className="mt-0">
+                <div className="mb-3 p-3 bg-muted/30 rounded-lg border">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-primary" />
+                    <span className="font-medium text-sm">
+                      {BusDataExtractor.getScheduleTypeLabel(schedule.tipo)}
                     </span>
-                  ))}
+                    {schedule.tipo === currentScheduleType && (
+                      <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50 text-xs">
+                        Hoje
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {schedule.horarios.length} horários disponíveis
+                  </p>
                 </div>
+                {renderSchedulePeriods(schedule.horarios)}
+              </TabsContent>
+            ))}
+          </Tabs>
+        ) : (
+          <div>
+            <div className="mb-3 p-3 bg-orange-50 rounded-lg border border-orange-200">
+              <div className="flex items-center gap-2">
+                <Info className="h-4 w-4 text-orange-600" />
+                <span className="font-medium text-sm text-orange-800">
+                  Horário Geral (não categorizado por dia)
+                </span>
               </div>
-            );
-          })}
-        </div>
+              <p className="text-xs text-orange-600 mt-1">
+                Estes horários podem variar entre dias úteis, sábados e domingos
+              </p>
+            </div>
+            {renderSchedulePeriods(line.horarios)}
+          </div>
+        )}
 
         <div className="flex items-center justify-between mt-4 pt-4 border-t">
           <div className="flex items-center gap-1 text-sm text-muted-foreground">
             <MapPin className="h-3 w-3" />
             <span>Move Metropolitano</span>
           </div>
-          <div className="text-sm text-muted-foreground">
-            {displayHorarios.length} horários disponíveis
-            {line.schedulesDetailed && (
-              <span className="ml-2 text-xs text-primary">
-                • {line.schedulesDetailed.length} tipos de dia
-              </span>
-            )}
-          </div>
+          {line.lastUpdated && (
+            <div className="text-xs text-muted-foreground">
+              Atualizado em {new Date(line.lastUpdated).toLocaleDateString('pt-BR')}
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>
