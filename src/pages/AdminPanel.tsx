@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BusDataUpdater } from '@/components/BusDataUpdater';
 import { ScrapingManager } from '@/components/ScrapingManager';
+import { AllLinesProcessor } from '@/components/AllLinesProcessor';
 import { Bus, LogOut, Settings, Database, Download, Upload, AlertCircle } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -352,6 +353,9 @@ const AdminPanel = () => {
           busLines={busLines}
           onUpdateComplete={handleUpdateComplete}
         />
+
+        {/* All Lines Processor */}
+        <AllLinesProcessor />
 
         {/* Navigation */}
         <div className="mt-8 text-center">

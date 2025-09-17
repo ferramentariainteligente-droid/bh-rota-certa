@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.test-scrape]
 verify_jwt = false
+
+[functions.process-all-lines]
+verify_jwt = false

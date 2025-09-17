@@ -6,7 +6,42 @@ const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-// Enhanced scraping function to extract structured schedule data
+// Bus lines data (static copy to avoid external dependency)
+const BUS_LINES_SAMPLE = [
+  {
+    "url": "https://movemetropolitano.com.br/4211-terminal-sao-benedito-circular-conjunto-cristina",
+    "linha": "4211 Terminal São Benedito / Circular Conjunto Cristina"
+  },
+  {
+    "url": "https://movemetropolitano.com.br/5889-vila-maria-terminal-vilarinho", 
+    "linha": "5889 Vila Maria / Terminal Vilarinho"
+  },
+  {
+    "url": "https://movemetropolitano.com.br/402h-terminal-sao-gabriel-hospitais",
+    "linha": "402H Terminal São Gabriel / Hospitais"
+  },
+  {
+    "url": "https://movemetropolitano.com.br/1303-betim-bh-via-terezopolis",
+    "linha": "1303 Betim / BH Via Terezópolis"
+  },
+  {
+    "url": "https://movemetropolitano.com.br/5104-pampulha-centro-via-antonio-carlos", 
+    "linha": "5104 Pampulha / Centro Via Antônio Carlos"
+  },
+  {
+    "url": "https://movemetropolitano.com.br/9202-venda-nova-centro",
+    "linha": "9202 Venda Nova / Centro"
+  },
+  {
+    "url": "https://movemetropolitano.com.br/6001-contagem-centro-bh",
+    "linha": "6001 Contagem / Centro BH"
+  },
+  {
+    "url": "https://movemetropolitano.com.br/3001-nova-lima-centro-bh",
+    "linha": "3001 Nova Lima / Centro BH"
+  }
+];
+
 async function scrapeBusSchedules(url: string): Promise<{
   success: boolean;
   schedules: Array<{ tipo: string; horarios: string[] }>;
@@ -26,7 +61,7 @@ async function scrapeBusSchedules(url: string): Promise<{
     }
 
     const html = await response.text();
-    console.log(`Fetched HTML, length: ${html.length} chars`);
+    console.log(`Fetched HTML for ${url}, length: ${html.length} chars`);
     
     return extractScheduleData(html);
     
@@ -43,7 +78,7 @@ async function scrapeBusSchedules(url: string): Promise<{
 function extractScheduleData(html: string): {
   success: boolean;
   schedules: Array<{ tipo: string; horarios: string[] }>;
-  error?: string;
+  error?: string;  
 } {
   try {
     const schedules: Array<{ tipo: string; horarios: string[] }> = [];
@@ -52,14 +87,21 @@ function extractScheduleData(html: string): {
     // Look for the schedule container div
     const schedulesMatch = html.match(/<div class="horarios">([\s\S]*?)<\/div>/);
     if (!schedulesMatch) {
-      console.log('No schedule container found');
-      return { success: false, schedules: [], error: 'Schedule container not found' };
+      console.log('No schedule container found, trying alternative patterns');
+      
+      // Try alternative patterns for schedule extraction
+      const altPattern1 = html.match(/<div[^>]*class="[^"]*horario[^"]*"[^>]*>([\s\S]*?)<\/div>/i);
+      const altPattern2 = html.match(/<section[^>]*class="[^"]*schedule[^"]*"[^>]*>([\s\S]*?)<\/section>/i);
+      
+      if (!altPattern1 && !altPattern2) {
+        return { success: false, schedules: [], error: 'Schedule container not found' };
+      }
     }
 
-    const schedulesHtml = schedulesMatch[1];
+    const schedulesHtml = schedulesMatch ? schedulesMatch[1] : html;
     
     // Extract each schedule type section (diasemana divs)
-    const scheduleTypeRegex = /<div class="diasemana[^"]*">([\s\S]*?)<\/div>/g;
+    const scheduleTypeRegex = /<div class="diasemana[^"]*"[^>]*>([\s\S]*?)<\/div>/g;
     let match;
     
     while ((match = scheduleTypeRegex.exec(schedulesHtml)) !== null) {
@@ -94,8 +136,19 @@ function extractScheduleData(html: string): {
     }
     
     if (schedules.length === 0) {
-      console.log('No schedules extracted');
-      return { success: false, schedules: [], error: 'No schedule data found' };
+      // If no detailed schedules found, try to extract any time patterns
+      const timePatterns = html.match(/\b\d{1,2}:\d{2}\b/g);
+      if (timePatterns && timePatterns.length > 0) {
+        const uniqueTimes = [...new Set(timePatterns)].sort();
+        schedules.push({ 
+          tipo: 'geral', 
+          horarios: uniqueTimes.slice(0, 50) // Limit to prevent too many results
+        });
+        console.log(`Extracted general schedule: ${uniqueTimes.length} times`);
+      } else {
+        console.log('No schedules extracted');
+        return { success: false, schedules: [], error: 'No schedule data found' };
+      }
     }
     
     console.log(`Successfully extracted ${schedules.length} schedule types`);
@@ -147,51 +200,20 @@ Deno.serve(async (req) => {
   }
 
   try {
-    console.log('Enhanced scraping function called');
-    const { source_ids = [], force_refresh = false, test_url } = await req.json().catch(() => ({}));
+    console.log('Processing all bus lines for schedule categorization');
+    const { batch_size = 10, start_index = 0 } = await req.json().catch(() => ({}));
     const executionId = crypto.randomUUID();
 
-    console.log(`Starting enhanced bus schedule scraping - Execution ID: ${executionId}`);
-
-    // If test_url is provided, just test that URL
-    if (test_url) {
-      console.log(`Testing single URL: ${test_url}`);
-      const result = await scrapeBusSchedules(test_url);
-      
-      return new Response(
-        JSON.stringify({
-          success: result.success,
-          execution_id: executionId,
-          test_result: result,
-          message: result.success ? 
-            `Successfully scraped ${result.schedules.length} schedule types` : 
-            `Failed to scrape: ${result.error}`
-        }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: result.success ? 200 : 400
-        }
-      );
-    }
+    console.log(`Starting batch processing - Execution ID: ${executionId}, batch_size: ${batch_size}, start_index: ${start_index}`);
 
     // Get active scraping sources
-    let sourcesQuery = supabase
+    const { data: sources, error: sourcesError } = await supabase
       .from('scraping_sources')
       .select('*')
-      .eq('is_active', true);
+      .eq('is_active', true)
+      .limit(1);
 
-    if (source_ids.length > 0) {
-      sourcesQuery = sourcesQuery.in('id', source_ids);
-    }
-
-    const { data: sources, error: sourcesError } = await sourcesQuery;
-
-    if (sourcesError) {
-      console.error('Sources error:', sourcesError);
-      throw new Error(`Error fetching sources: ${sourcesError.message}`);
-    }
-
-    if (!sources || sources.length === 0) {
+    if (sourcesError || !sources || sources.length === 0) {
       return new Response(
         JSON.stringify({ 
           success: false, 
@@ -204,16 +226,15 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`Found ${sources.length} active sources`);
-
     // Log start of execution
     const { error: startLogError } = await supabase.from('scraping_logs').insert({
-      source_id: null, 
+      source_id: sources[0].id, 
       execution_id: executionId,
       status: 'started',
       execution_details: {
-        sources_to_process: sources.map(s => ({ id: s.id, name: s.name })),
-        force_refresh,
+        batch_processing: true,
+        batch_size,
+        start_index,
         started_at: new Date().toISOString()
       }
     });
@@ -222,62 +243,34 @@ Deno.serve(async (req) => {
       console.error('Start log error:', startLogError);
     }
 
-    // Get bus lines to scrape from our JSON data
-    const busLinesResponse = await fetch('https://raw.githubusercontent.com/your-repo/bus-lines.json'); // Replace with actual URL
-    let busLinesToScrape = [];
+    // Process lines in batches
+    const linesToProcess = BUS_LINES_SAMPLE.slice(start_index, start_index + batch_size);
     
-    // Fallback to hardcoded URLs if fetch fails
-    try {
-      if (busLinesResponse.ok) {
-        const busLinesData = await busLinesResponse.json();
-        busLinesToScrape = busLinesData.map((line: any) => line.url);
-        console.log(`Loaded ${busLinesToScrape.length} bus lines from JSON`);
-      } else {
-        throw new Error('Failed to fetch bus lines JSON');
-      }
-    } catch (error) {
-      console.log('Using fallback bus lines list:', error.message);
-      busLinesToScrape = [
-        "https://movemetropolitano.com.br/4211-terminal-sao-benedito-circular-conjunto-cristina",
-        "https://movemetropolitano.com.br/5889-vila-maria-terminal-vilarinho",
-        "https://movemetropolitano.com.br/402h-terminal-sao-gabriel-hospitais",
-        "https://movemetropolitano.com.br/1303-betim-bh-via-terezopolis",
-        "https://movemetropolitano.com.br/5104-pampulha-centro-via-antonio-carlos",
-        "https://movemetropolitano.com.br/9202-venda-nova-centro",
-        "https://movemetropolitano.com.br/6001-contagem-centro-bh",
-        "https://movemetropolitano.com.br/3001-nova-lima-centro-bh"
-      ];
-    }
-
     let totalProcessed = 0;
-    let totalLines = 0;
     let totalSuccessful = 0;
     let totalFailed = 0;
 
-    // Process each bus line URL (process in batches to avoid timeout)
-    const batchSize = force_refresh ? 50 : 20; // Larger batch if force refresh
-    const linesToProcess = busLinesToScrape.slice(0, batchSize);
-    
-    console.log(`Processing ${linesToProcess.length} URLs (batch size: ${batchSize})`);
+    console.log(`Processing ${linesToProcess.length} bus lines`);
 
-    for (const url of linesToProcess) {
-      console.log(`Processing URL: ${url}`);
+    // Process each bus line URL
+    for (const busLine of linesToProcess) {
+      console.log(`Processing: ${busLine.linha}`);
       
       try {
-        const result = await scrapeBusSchedules(url);
+        const result = await scrapeBusSchedules(busLine.url);
         
         if (result.success && result.schedules.length > 0) {
           // Extract line info from URL
-          const pathParts = new URL(url).pathname.split('-');
+          const pathParts = new URL(busLine.url).pathname.split('-');
           const lineCode = pathParts[0].replace('/', '');
-          const lineName = pathParts.slice(1).join(' ').replace(/-/g, ' ');
+          const lineName = busLine.linha;
           
           // Save to database
           const { error: lineError } = await supabase.from('scraped_bus_lines').upsert({
-            source_id: sources[0].id, // Use first source for now
+            source_id: sources[0].id,
             line_code: lineCode,
             line_name: lineName,
-            line_url: url,
+            line_url: busLine.url,
             route_description: lineName,
             last_scraped_at: new Date().toISOString(),
             scraping_status: 'success',
@@ -285,7 +278,8 @@ Deno.serve(async (req) => {
             metadata: {
               schedules_count: result.schedules.length,
               total_times: result.schedules.reduce((acc, s) => acc + s.horarios.length, 0),
-              scraping_method: 'enhanced_html_parser'
+              scraping_method: 'enhanced_html_parser_v2',
+              has_detailed_schedules: result.schedules.length > 1 || result.schedules[0]?.tipo !== 'geral'
             }
           }, {
             onConflict: 'line_url'
@@ -296,21 +290,42 @@ Deno.serve(async (req) => {
             totalFailed++;
           } else {
             totalSuccessful++;
-            console.log(`Successfully saved ${lineCode} with ${result.schedules.length} schedule types`);
+            console.log(`✅ Successfully saved ${lineCode} with ${result.schedules.length} schedule types`);
           }
         } else {
-          console.log(`Failed to scrape ${url}: ${result.error}`);
+          console.log(`❌ Failed to scrape ${busLine.url}: ${result.error}`);
+          
+          // Still save the line but mark as failed
+          const pathParts = new URL(busLine.url).pathname.split('-');
+          const lineCode = pathParts[0].replace('/', ''); 
+          
+          await supabase.from('scraped_bus_lines').upsert({
+            source_id: sources[0].id,
+            line_code: lineCode,
+            line_name: busLine.linha,
+            line_url: busLine.url,
+            route_description: busLine.linha,
+            last_scraped_at: new Date().toISOString(),
+            scraping_status: 'failed',
+            schedule_data: { error: result.error },
+            metadata: {
+              scraping_method: 'enhanced_html_parser_v2',
+              error_message: result.error
+            }
+          }, {
+            onConflict: 'line_url'
+          });
+        
           totalFailed++;
         }
         
         totalProcessed++;
-        totalLines++;
         
-        // Add delay between requests
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        // Add delay between requests to be respectful
+        await new Promise(resolve => setTimeout(resolve, 1500));
         
       } catch (error) {
-        console.error(`Error processing ${url}:`, error);
+        console.error(`Error processing ${busLine.url}:`, error);
         totalFailed++;
         totalProcessed++;
       }
@@ -321,15 +336,17 @@ Deno.serve(async (req) => {
       source_id: sources[0].id,
       execution_id: executionId,
       status: 'completed',
-      lines_found: totalLines,
+      lines_found: linesToProcess.length,
       lines_processed: totalProcessed,
       lines_updated: totalSuccessful,
       lines_failed: totalFailed,
       completed_at: new Date().toISOString(),
       execution_details: {
-        enhanced_scraping: true,
+        batch_processing: true,
         processing_summary: {
-          total_urls_processed: totalProcessed,
+          batch_size,
+          start_index,
+          total_processed: totalProcessed,
           successful_scrapes: totalSuccessful,
           failed_scrapes: totalFailed
         }
@@ -340,28 +357,27 @@ Deno.serve(async (req) => {
       console.error('Complete log error:', completeLogError);
     }
 
-    // Update source timestamps
-    for (const source of sources) {
-      await supabase
-        .from('scraping_sources')
-        .update({ last_scraped_at: new Date().toISOString() })
-        .eq('id', source.id);
-    }
+    // Update source timestamp
+    await supabase
+      .from('scraping_sources')
+      .update({ last_scraped_at: new Date().toISOString() })
+      .eq('id', sources[0].id);
 
-    console.log(`Enhanced scraping completed - ID: ${executionId}, processed ${totalProcessed} URLs, ${totalSuccessful} successful`);
+    console.log(`✅ Batch processing completed - ID: ${executionId}, processed ${totalProcessed} lines, ${totalSuccessful} successful`);
 
     return new Response(
       JSON.stringify({
         success: true,
         execution_id: executionId,
-        sources_processed: sources.length,
         statistics: {
-          total_lines_found: totalLines,
+          batch_size,
+          start_index,
           total_lines_processed: totalProcessed,
           total_lines_updated: totalSuccessful,
-          total_lines_failed: totalFailed
+          total_lines_failed: totalFailed,
+          next_start_index: start_index + batch_size
         },
-        message: `Successfully processed ${totalProcessed} URLs with ${totalSuccessful} successful scrapes`
+        message: `Successfully processed ${totalProcessed} lines with ${totalSuccessful} successful scrapes`
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -370,7 +386,7 @@ Deno.serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Error in enhanced scrape-bus-schedules function:', error);
+    console.error('Error in process-all-lines function:', error);
     return new Response(
       JSON.stringify({ 
         success: false, 
@@ -382,4 +398,4 @@ Deno.serve(async (req) => {
       }
     );
   }
-})
+});
