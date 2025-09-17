@@ -3,205 +3,304 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Download, RefreshCw, AlertCircle } from 'lucide-react';
-import { useToast } from '@/components/ui/use-toast';
-import { BusDataExtractor } from '@/services/BusDataExtractor';
+import { Download, RefreshCw, AlertCircle, Pause, Play } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 interface BusLine {
   url: string;
   linha: string;
   horarios: string[];
+  schedulesDetailed?: any[];
+  lastUpdated?: string;
 }
 
 interface BusDataUpdaterProps {
   busLines: BusLine[];
-  onUpdateComplete?: (updatedLines: any[]) => void;
+  onUpdateComplete?: (updatedLines: BusLine[]) => void;
 }
 
 export const BusDataUpdater = ({ busLines, onUpdateComplete }: BusDataUpdaterProps) => {
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   const [progress, setProgress] = useState(0);
   const [currentLine, setCurrentLine] = useState('');
   const [completedLines, setCompletedLines] = useState(0);
+  const [failedLines, setFailedLines] = useState(0);
+  const [batchSize] = useState(5); // Process 5 lines simultaneously
   const { toast } = useToast();
 
-  const handleManualExtraction = async () => {
-    setIsUpdating(true);
-    setProgress(0);
-    setCompletedLines(0);
-    
+  const extractScheduleFromContent = (content: string, url: string) => {
     try {
-      const sampleUrls = [
-        'https://movemetropolitano.com.br/4211-terminal-sao-benedito-circular-conjunto-cristina',
-        'https://movemetropolitano.com.br/5889-vila-maria-terminal-vilarinho',
-        'https://movemetropolitano.com.br/402h-terminal-sao-gabriel-hospitais'
+      const schedules: any[] = [];
+      const lines = content.split('\n');
+      
+      const schedulePatterns = [
+        { pattern: /Dias Úteis(?!\s*[–-]\s*(?:Atípico|Férias))/i, tipo: 'dias_uteis' },
+        { pattern: /Dias Úteis\s*[–-]\s*Férias/i, tipo: 'dias_uteis_ferias' },
+        { pattern: /Sábado(?!\s*[–-]\s*Férias)/i, tipo: 'sabado' },
+        { pattern: /Sábado\s*[–-]\s*Férias/i, tipo: 'sabado_ferias' },
+        { pattern: /Domingos?\s*e\s*Feriados/i, tipo: 'domingo_feriado' }
       ];
 
-      // Sample extracted data based on what we found
-      const extractedSampleData = [
-        {
-          url: 'https://movemetropolitano.com.br/4211-terminal-sao-benedito-circular-conjunto-cristina',
-          linha: '4211 Terminal São Benedito / Circular Conjunto Cristina',
-          horarios: ['05:00', '06:00', '07:00', '08:00', '16:00', '17:30', '19:00', '20:30'],
-          schedulesDetailed: [
-            {
-              tipo: 'dias_uteis',
-              horarios: ['05:00', '06:00', '07:00', '08:00', '16:00', '17:30', '19:00', '20:30']
-            },
-            {
-              tipo: 'sabado',
-              horarios: ['05:00', '06:00', '09:00', '12:00', '15:00', '18:00', '21:00', '23:00']
-            },
-            {
-              tipo: 'domingo_feriado',
-              horarios: ['06:00', '09:00', '12:00', '15:00', '18:00', '21:00']
-            }
-          ],
-          lastUpdated: new Date().toISOString()
-        },
-        {
-          url: 'https://movemetropolitano.com.br/5889-vila-maria-terminal-vilarinho',
-          linha: '5889 Vila Maria / Terminal Vilarinho',
-          horarios: ['07:30', '08:20'],
-          schedulesDetailed: [
-            {
-              tipo: 'dias_uteis',
-              horarios: ['07:30', '08:20']
-            },
-            {
-              tipo: 'sabado',
-              horarios: ['07:30', '08:20', '15:10']
-            },
-            {
-              tipo: 'domingo_feriado',
-              horarios: ['07:15']
-            }
-          ],
-          lastUpdated: new Date().toISOString()
-        },
-        {
-          url: 'https://movemetropolitano.com.br/402h-terminal-sao-gabriel-hospitais',
-          linha: '402H Terminal São Gabriel / Hospitais',
-          horarios: ['05:50', '06:20', '06:50', '07:20', '07:50', '08:40', '09:40', '17:05', '17:35', '18:05', '18:35', '19:05'],
-          schedulesDetailed: [
-            {
-              tipo: 'dias_uteis',
-              horarios: ['05:50', '06:20', '06:50', '07:20', '07:50', '08:40', '09:40', '17:05', '17:35', '18:05', '18:35', '19:05']
-            }
-          ],
-          lastUpdated: new Date().toISOString()
-        }
-      ];
+      let currentType = '';
+      let currentHorarios: string[] = [];
 
-      // Update the first few lines with sample data
-      const updatedLines = busLines.map(line => {
-        const sampleData = extractedSampleData.find(sample => sample.url === line.url);
-        if (sampleData) {
-          return sampleData;
+      for (const line of lines) {
+        const trimmedLine = line.trim();
+        
+        // Check for schedule type
+        const matchedPattern = schedulePatterns.find(p => p.pattern.test(trimmedLine));
+        if (matchedPattern) {
+          // Save previous schedule
+          if (currentType && currentHorarios.length > 0) {
+            schedules.push({
+              tipo: currentType,
+              horarios: [...currentHorarios].sort()
+            });
+          }
+          currentType = matchedPattern.tipo;
+          currentHorarios = [];
+          continue;
         }
-        return line;
-      });
 
-      // Simulate progress
-      for (let i = 0; i <= 100; i += 10) {
-        setProgress(i);
-        setCurrentLine(`Atualizando linha ${i/10 + 1} de ${extractedSampleData.length}`);
-        await new Promise(resolve => setTimeout(resolve, 200));
+        // Extract time
+        if (currentType) {
+          const timeMatch = trimmedLine.match(/^(\d{1,2}:\d{2})/);
+          if (timeMatch && !currentHorarios.includes(timeMatch[1])) {
+            currentHorarios.push(timeMatch[1]);
+          }
+        }
       }
 
-      setCompletedLines(extractedSampleData.length);
-      
-      toast({
-        title: "Atualização Concluída",
-        description: `${extractedSampleData.length} linhas foram atualizadas com horários detalhados por dia da semana.`,
-      });
+      // Save last schedule
+      if (currentType && currentHorarios.length > 0) {
+        schedules.push({
+          tipo: currentType,
+          horarios: [...currentHorarios].sort()
+        });
+      }
 
-      onUpdateComplete?.(updatedLines);
-
+      return schedules.length > 0 ? schedules : null;
     } catch (error) {
-      console.error('Error updating bus data:', error);
-      toast({
-        title: "Erro na Atualização", 
-        description: "Não foi possível atualizar os dados. Tente novamente.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsUpdating(false);
-      setProgress(0);
-      setCurrentLine('');
+      console.error('Error extracting schedule:', error);
+      return null;
     }
   };
 
-  const downloadUpdatedData = () => {
-    // This would download the updated JSON with detailed schedules
-    toast({
-      title: "Download Iniciado",
-      description: "Os dados atualizados serão baixados em breve.",
-    });
+  const processBatch = async (batch: BusLine[], batchIndex: number) => {
+    const results = await Promise.allSettled(
+      batch.map(async (line) => {
+        try {
+          // Skip invalid URLs
+          if (!line.url || !line.url.startsWith('http') || line.url.includes('expressounir.com.br')) {
+            return line;
+          }
+
+          const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(line.url)}`);
+          const data = await response.json();
+          
+          if (data.contents) {
+            const schedules = extractScheduleFromContent(data.contents, line.url);
+            if (schedules && schedules.length > 0) {
+              return {
+                ...line,
+                schedulesDetailed: schedules,
+                lastUpdated: new Date().toISOString()
+              };
+            }
+          }
+          return line;
+        } catch (error) {
+          console.error(`Error processing ${line.url}:`, error);
+          return line;
+        }
+      })
+    );
+
+    return results.map(result => result.status === 'fulfilled' ? result.value : null);
   };
 
+  const handleFullUpdate = async () => {
+    if (isPaused) {
+      setIsPaused(false);
+      return;
+    }
+
+    setIsUpdating(true);
+    setIsPaused(false);
+    setProgress(0);
+    setCompletedLines(0);
+    setFailedLines(0);
+    
+    const validLines = busLines.filter(line => 
+      line.url && 
+      line.url.startsWith('http') && 
+      !line.url.includes('expressounir.com.br')
+    );
+
+    const totalLines = validLines.length;
+    const updatedLines = [...busLines];
+    
+    try {
+      // Process in batches
+      for (let i = 0; i < validLines.length; i += batchSize) {
+        if (isPaused) break;
+
+        const batch = validLines.slice(i, i + batchSize);
+        setCurrentLine(`Processando lote ${Math.floor(i/batchSize) + 1} de ${Math.ceil(validLines.length/batchSize)}`);
+        
+        const batchResults = await processBatch(batch, Math.floor(i/batchSize));
+        
+        // Update the results
+        batchResults.forEach((result, batchIndex) => {
+          if (result) {
+            const originalIndex = busLines.findIndex(line => line.url === batch[batchIndex].url);
+            if (originalIndex !== -1) {
+              updatedLines[originalIndex] = result;
+              if (result.schedulesDetailed) {
+                setCompletedLines(prev => prev + 1);
+              } else {
+                setFailedLines(prev => prev + 1);
+              }
+            }
+          }
+        });
+
+        setProgress(Math.min(((i + batch.length) / totalLines) * 100, 100));
+        
+        // Small delay between batches to avoid overwhelming servers
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+
+      if (!isPaused) {
+        toast({
+          title: "✅ Atualização Concluída",
+          description: `${completedLines} linhas atualizadas com horários detalhados, ${failedLines} falharam.`,
+        });
+        onUpdateComplete?.(updatedLines);
+      }
+
+    } catch (error) {
+      console.error('Error during full update:', error);
+      toast({
+        title: "❌ Erro na Atualização",
+        description: "Erro durante o processamento. Tente novamente.",
+        variant: "destructive"
+      });
+    } finally {
+      if (!isPaused) {
+        setIsUpdating(false);
+        setProgress(0);
+        setCurrentLine('');
+      }
+    }
+  };
+
+  const handlePause = () => {
+    setIsPaused(true);
+    setIsUpdating(false);
+  };
+
+  const downloadData = () => {
+    const dataStr = JSON.stringify(busLines, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `bus-lines-updated-${new Date().toISOString().split('T')[0]}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const validLines = busLines.filter(line => 
+    line.url && 
+    line.url.startsWith('http') && 
+    !line.url.includes('expressounir.com.br')
+  ).length;
+
+  const linesWithSchedules = busLines.filter(line => line.schedulesDetailed?.length).length;
+
   return (
-    <Card className="w-full max-w-2xl mx-auto">
+    <Card className="w-full max-w-4xl mx-auto">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <RefreshCw className="h-5 w-5" />
-          Atualizador de Dados de Ônibus
+          Processamento Automático de {validLines} Linhas
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <Alert>
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            Esta ferramenta captura horários detalhados por dia da semana (Segunda-Sexta, Sábado, Domingo/Feriados) 
-            dos sites oficiais das linhas de ônibus.
+            Sistema irá processar <strong>{validLines} linhas válidas</strong> automaticamente em lotes de {batchSize}.
+            <br />📊 Status: {linesWithSchedules} linhas já têm horários detalhados
           </AlertDescription>
         </Alert>
 
         {isUpdating && (
-          <div className="space-y-2">
-            <Progress value={progress} className="w-full" />
-            <p className="text-sm text-muted-foreground text-center">
-              {currentLine}
-            </p>
+          <div className="space-y-3">
+            <Progress value={progress} className="w-full h-2" />
+            <div className="flex justify-between text-sm text-muted-foreground">
+              <span>{currentLine}</span>
+              <span>{Math.round(progress)}%</span>
+            </div>
+            <div className="grid grid-cols-3 gap-4 text-center">
+              <div className="p-2 bg-green-50 rounded">
+                <div className="text-lg font-bold text-green-600">{completedLines}</div>
+                <div className="text-xs text-green-600">Atualizadas</div>
+              </div>
+              <div className="p-2 bg-red-50 rounded">
+                <div className="text-lg font-bold text-red-600">{failedLines}</div>
+                <div className="text-xs text-red-600">Falharam</div>
+              </div>
+              <div className="p-2 bg-blue-50 rounded">
+                <div className="text-lg font-bold text-blue-600">{completedLines + failedLines}</div>
+                <div className="text-xs text-blue-600">Processadas</div>
+              </div>
+            </div>
           </div>
         )}
 
-        {completedLines > 0 && !isUpdating && (
-          <Alert>
-            <AlertDescription>
-              ✅ {completedLines} linhas foram atualizadas com sucesso!
-            </AlertDescription>
-          </Alert>
-        )}
-
         <div className="flex gap-2">
-          <Button 
-            onClick={handleManualExtraction} 
-            disabled={isUpdating}
-            className="flex-1"
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${isUpdating ? 'animate-spin' : ''}`} />
-            {isUpdating ? 'Atualizando...' : 'Atualizar Dados'}
-          </Button>
-          
-          {completedLines > 0 && (
+          {!isUpdating ? (
             <Button 
-              variant="outline"
-              onClick={downloadUpdatedData}
+              onClick={handleFullUpdate} 
+              className="flex-1"
+              size="lg"
             >
-              <Download className="h-4 w-4 mr-2" />
-              Baixar JSON
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Processar Todas as {validLines} Linhas
+            </Button>
+          ) : (
+            <Button 
+              onClick={handlePause}
+              variant="outline" 
+              className="flex-1"
+              size="lg"
+            >
+              <Pause className="h-4 w-4 mr-2" />
+              Pausar Processamento
             </Button>
           )}
+          
+          <Button 
+            variant="outline"
+            onClick={downloadData}
+            size="lg"
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Baixar JSON
+          </Button>
         </div>
 
-        <div className="text-sm text-muted-foreground">
-          <p><strong>Recursos:</strong></p>
-          <ul className="list-disc list-inside space-y-1 mt-1">
-            <li>Extrai horários específicos para dias úteis, sábados e domingos/feriados</li>
-            <li>Identifica horários especiais (férias, atípicos)</li>
-            <li>Mantém dados originais como fallback</li>
-            <li>Detecta automaticamente o tipo de dia atual</li>
+        <div className="text-sm text-muted-foreground bg-muted/50 p-3 rounded">
+          <p><strong>🚀 Recursos do Sistema Automático:</strong></p>
+          <ul className="list-disc list-inside space-y-1 mt-2">
+            <li>Processa {validLines} linhas em lotes de {batchSize} simultaneamente</li>
+            <li>Extrai horários para Dias Úteis, Sábados, Domingos/Feriados</li>
+            <li>Sistema de pausa/retomada para controle do usuário</li>
+            <li>Estatísticas em tempo real do progresso</li>
+            <li>Download automático do JSON atualizado</li>
           </ul>
         </div>
       </CardContent>
