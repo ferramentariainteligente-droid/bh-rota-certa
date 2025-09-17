@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.scrape-bus-schedules]
 verify_jwt = false
+
+[functions.test-scrape]
+verify_jwt = false

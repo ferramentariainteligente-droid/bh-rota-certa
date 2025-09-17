@@ -123,6 +123,41 @@ export const ScrapingManager = () => {
     }
   };
 
+  const testConnection = async () => {
+    try {
+      console.log('Testing connection to edge functions...');
+      
+      const response = await supabase.functions.invoke('test-scrape', {
+        body: { test: true }
+      });
+
+      console.log('Test response:', response);
+
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+
+      toast({
+        title: "Teste de Conexão",
+        description: "Conexão com Edge Functions funcionando! ✅",
+        duration: 3000
+      });
+
+      // Reload logs to see the test entry
+      setTimeout(() => {
+        loadRecentLogs();
+      }, 1000);
+
+    } catch (error) {
+      console.error('Connection test failed:', error);
+      toast({
+        title: "Erro no Teste",
+        description: "Falha na conexão: " + error.message,
+        variant: "destructive"
+      });
+    }
+  };
+
   const startScraping = async (selectedSourceIds: string[] = []) => {
     setIsLoading(true);
     setIsRunning(true);
@@ -301,6 +336,15 @@ export const ScrapingManager = () => {
                 <Play className="w-4 h-4" />
               )}
               {isLoading ? 'Processando...' : 'Iniciar Scraping Completo'}
+            </Button>
+
+            <Button 
+              onClick={testConnection}
+              variant="secondary"
+              className="flex items-center gap-2"
+            >
+              <Activity className="w-4 h-4" />
+              Testar Conexão
             </Button>
 
             <Button 
