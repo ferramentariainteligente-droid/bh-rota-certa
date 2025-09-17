@@ -14,7 +14,65 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      bus_lines: {
+        Row: {
+          created_at: string
+          full_title: string
+          id: string
+          line_number: string
+          official_url: string
+          route_name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          full_title: string
+          id?: string
+          line_number: string
+          official_url: string
+          route_name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          full_title?: string
+          id?: string
+          line_number?: string
+          official_url?: string
+          route_name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      bus_schedules: {
+        Row: {
+          bus_line_id: string
+          created_at: string
+          departure_time: string
+          id: string
+        }
+        Insert: {
+          bus_line_id: string
+          created_at?: string
+          departure_time: string
+          id?: string
+        }
+        Update: {
+          bus_line_id?: string
+          created_at?: string
+          departure_time?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bus_schedules_bus_line_id_fkey"
+            columns: ["bus_line_id"]
+            isOneToOne: false
+            referencedRelation: "bus_lines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
