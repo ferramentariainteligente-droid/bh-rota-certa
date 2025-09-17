@@ -223,14 +223,13 @@ const Index = () => {
             </div>
             <div>
               <h4 className="font-medium mb-3">Informações</h4>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li>📍 Região Metropolitana de BH</li>
-                <li>🚌 {totalLines} linhas disponíveis</li>
-                <li>⏰ Horários atualizados automaticamente</li>
-                {linesWithSchedules > 0 && (
-                  <li>🕐 {linesWithSchedules} linhas com horários categorizados</li>
-                )}
-              </ul>
+              <div className="flex justify-center gap-6 text-sm">
+                <a href="/" className="text-muted-foreground hover:text-foreground">Início</a>
+                <a href="/sobre" className="text-muted-foreground hover:text-foreground">Sobre</a>
+                <a href="/contato" className="text-muted-foreground hover:text-foreground">Contato</a>
+                <a href="/privacidade" className="text-muted-foreground hover:text-foreground">Privacidade</a>
+                <a href="/termos" className="text-muted-foreground hover:text-foreground">Termos</a>
+              </div>
             </div>
           </div>
           <div className="border-t mt-6 pt-6 text-center text-sm text-muted-foreground">
