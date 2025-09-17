@@ -6,7 +6,6 @@ const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-// Enhanced scraping function to test specific URLs
 async function testScrapeBusSchedules(url: string): Promise<{
   success: boolean;
   schedules: Array<{ tipo: string; horarios: string[] }>;
@@ -48,6 +47,7 @@ function extractScheduleData(html: string): {
   metadata?: any;
 } {
   try {
+    console.log('Starting schedule extraction...');
     const schedules: Array<{ tipo: string; horarios: string[] }> = [];
     let metadata = {
       html_length: html.length,
@@ -55,117 +55,89 @@ function extractScheduleData(html: string): {
       sections_found: 0
     };
     
-    // Find the horarios container
-    const horariosMatch = html.match(/<div class="horarios">([\s\S]*?)(?=<div class="pub"|<\/div>\s*<\/div>|$)/);
-    if (!horariosMatch) {
-      console.log('No horarios container found');
-      return { 
-        success: false, 
-        schedules: [], 
-        error: 'Horarios container not found',
+    // Check if HTML contains horarios div
+    const hasHorariosDiv = html.includes('class="horarios"');
+    console.log(`HTML contains horarios div: ${hasHorariosDiv}`);
+    
+    if (!hasHorariosDiv) {
+      return {
+        success: false,
+        schedules: [],
+        error: 'No horarios container found in HTML',
         metadata
       };
     }
 
     metadata.schedule_container_found = true;
-    const horariosHtml = horariosMatch[1];
-    console.log(`Found horarios container with ${horariosHtml.length} chars`);
     
-    // Extract each diasemana div with better regex that handles nested structure
-    const sections = [];
-    let currentPos = 0;
+    // Simple pattern matching for diasemana sections
+    const diasemanaPattern = /<div class="diasemana[^>]*">(.*?)<\/div>/gs;
+    const matches = [...html.matchAll(diasemanaPattern)];
     
-    // Find all div diasemana starting positions
-    const diasemanaStart = /<div class="diasemana[^"]*"[^>]*>/g;
-    let startMatch;
+    console.log(`Found ${matches.length} potential diasemana matches`);
     
-    while ((startMatch = diasemanaStart.exec(horariosHtml)) !== null) {
-      const startPos = startMatch.index;
-      const startTag = startMatch[0];
+    for (const match of matches) {
+      const sectionHtml = match[1];
+      console.log(`Processing section with ${sectionHtml.length} chars`);
       
-      // Find the matching closing div by counting nested divs
-      let divCount = 1;
-      let endPos = startPos + startTag.length;
-      
-      while (divCount > 0 && endPos < horariosHtml.length) {
-        const nextDiv = horariosHtml.substring(endPos).match(/<\/?div[^>]*>/);
-        if (!nextDiv) break;
-        
-        endPos += nextDiv.index! + nextDiv[0].length;
-        if (nextDiv[0].startsWith('</div>')) {
-          divCount--;
-        } else if (nextDiv[0].startsWith('<div')) {
-          divCount++;
-        }
-      }
-      
-      if (divCount === 0) {
-        const sectionContent = horariosHtml.substring(startPos, endPos - 6); // Remove </div>
-        sections.push(sectionContent);
-      }
-    }
-    
-    console.log(`Found ${sections.length} diasemana sections`);
-    
-    for (const sectionHtml of sections) {
-      metadata.sections_found++;
-      
-      // Extract the schedule type name from div-semana
+      // Extract schedule type
       const typeMatch = sectionHtml.match(/<div class="div-semana">([^<]+)<\/div>/);
       if (!typeMatch) {
-        console.log('No type match found in section');
+        console.log('No schedule type found in section');
         continue;
       }
       
       const scheduleType = typeMatch[1].trim();
-      console.log(`Processing schedule type: "${scheduleType}"`);
+      console.log(`Found schedule type: "${scheduleType}"`);
       
-      // Extract all times from div-hora elements, handling <sup> tags
-      const timeRegex = /<div class="div-hora">([^<]+)(?:<sup>[^<]*<\/sup>)?<\/div>/g;
+      // Extract times using simple pattern
+      const timePattern = /<div class="div-hora">([^<]+)(?:<sup>[^<]*<\/sup>)?<\/div>/g;
       const horarios: string[] = [];
       let timeMatch;
       
-      while ((timeMatch = timeRegex.exec(sectionHtml)) !== null) {
-        let time = timeMatch[1].trim();
-        console.log(`Found raw time: "${time}"`);
+      while ((timeMatch = timePattern.exec(sectionHtml)) !== null) {
+        const rawTime = timeMatch[1].trim();
+        console.log(`Raw time found: "${rawTime}"`);
         
-        // Clean up time format (keep only digits and colon)
-        const cleanTime = time.replace(/[^\d:]/g, '');
+        // Clean the time - keep only numbers and colon
+        const cleanTime = rawTime.replace(/[^\d:]/g, '');
         if (/^\d{1,2}:\d{2}$/.test(cleanTime)) {
           horarios.push(cleanTime);
           console.log(`Added clean time: "${cleanTime}"`);
+        } else {
+          console.log(`Rejected invalid time format: "${cleanTime}"`);
         }
       }
       
       if (horarios.length > 0) {
-        // Map schedule types to standardized names
         const tipo = mapScheduleType(scheduleType);
         schedules.push({ tipo, horarios });
-        console.log(`Extracted "${scheduleType}" -> "${tipo}": [${horarios.join(', ')}]`);
+        console.log(`Added schedule: ${tipo} with ${horarios.length} times`);
+        metadata.sections_found++;
       } else {
         console.log(`No valid times found for "${scheduleType}"`);
       }
     }
     
+    console.log(`Total schedules extracted: ${schedules.length}`);
+    
     if (schedules.length === 0) {
-      console.log('No schedules extracted');
       return { 
         success: false, 
         schedules: [], 
-        error: 'No schedule data found in HTML structure',
+        error: 'No valid schedule data extracted',
         metadata
       };
     }
     
-    console.log(`Successfully extracted ${schedules.length} schedule types`);
     return { success: true, schedules, metadata };
     
   } catch (error) {
-    console.error('Error extracting schedule data:', error);
+    console.error('Error in extractScheduleData:', error);
     return { 
       success: false, 
       schedules: [], 
-      error: error.message,
+      error: `Extraction error: ${error.message}`,
       metadata: { parsing_error: true }
     };
   }
@@ -173,8 +145,8 @@ function extractScheduleData(html: string): {
 
 function mapScheduleType(rawType: string): string {
   const normalized = rawType.toLowerCase().trim();
+  console.log(`Mapping schedule type: "${rawType}" -> normalized: "${normalized}"`);
   
-  // Map various schedule type formats to standardized names
   if (normalized.includes('dias úteis') && normalized.includes('atípico')) {
     return 'dias_uteis_atipico';
   }
@@ -203,24 +175,40 @@ function mapScheduleType(rawType: string): string {
     return 'quarta_cinzas';
   }
   
-  // Fallback to a sanitized version
-  return normalized.replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
+  const mapped = normalized.replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
+  console.log(`Final mapping: "${rawType}" -> "${mapped}"`);
+  return mapped;
 }
 
 Deno.serve(async (req) => {
-  // Handle CORS preflight requests
+  console.log(`Request method: ${req.method}`);
+  
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    console.log('Enhanced test scrape function called');
+    console.log('Test scrape function called');
     
-    const { test_url } = await req.json().catch(() => ({}));
+    const requestBody = await req.text();
+    console.log(`Request body: ${requestBody}`);
+    
+    let parsedBody;
+    try {
+      parsedBody = requestBody ? JSON.parse(requestBody) : {};
+    } catch (parseError) {
+      console.error('JSON parse error:', parseError);
+      parsedBody = {};
+    }
+    
+    const { test_url } = parsedBody;
+    console.log(`Test URL: ${test_url}`);
+    
     const executionId = crypto.randomUUID();
 
     if (!test_url) {
-      // Test database connection
+      console.log('No test URL provided, running database test');
+      
       const { data: sources, error } = await supabase
         .from('scraping_sources')
         .select('*')
@@ -229,26 +217,13 @@ Deno.serve(async (req) => {
 
       if (error) {
         console.error('Database error:', error);
-        throw error;
-      }
-
-      console.log('Sources found:', sources?.length || 0);
-
-      // Simple test - just insert a test log
-      const { error: logError } = await supabase.from('scraping_logs').insert({
-        source_id: null,
-        execution_id: executionId,
-        status: 'completed',
-        lines_found: 0,
-        lines_processed: 0,
-        lines_updated: 0,
-        lines_failed: 0,
-        execution_details: { test: true, timestamp: new Date().toISOString() }
-      });
-
-      if (logError) {
-        console.error('Log insert error:', logError);
-        throw logError;
+        return new Response(
+          JSON.stringify({ success: false, error: `Database error: ${error.message}` }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 500
+          }
+        );
       }
 
       return new Response(
@@ -265,20 +240,19 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Test specific URL scraping
-    console.log(`Testing URL scraping: ${test_url}`);
+    console.log(`Starting scrape test for: ${test_url}`);
     const result = await testScrapeBusSchedules(test_url);
+    console.log(`Scrape result: success=${result.success}, schedules=${result.schedules.length}`);
     
-    // If successful, also try to update the database with real data
     if (result.success && result.schedules.length > 0) {
+      console.log('Attempting to update database with scraped data');
       try {
         const pathParts = new URL(test_url).pathname.split('-');
         const lineCode = pathParts[0].replace('/', '');
         const lineName = pathParts.slice(1).join(' ').replace(/-/g, ' ');
         
-        // Update or insert real scraped data
         const { error: updateError } = await supabase.from('scraped_bus_lines').upsert({
-          source_id: null, // Will be updated later
+          source_id: null,
           line_code: lineCode,
           line_name: lineName,
           line_url: test_url,
@@ -297,65 +271,48 @@ Deno.serve(async (req) => {
         });
 
         if (updateError) {
-          console.error('Error updating scraped data:', updateError);
+          console.error('Database update error:', updateError);
         } else {
-          console.log(`Successfully updated database with real scraped data for ${lineCode}`);
+          console.log('Successfully updated database');
         }
       } catch (dbError) {
-        console.error('Database update error:', dbError);
+        console.error('Database operation error:', dbError);
       }
     }
     
-    // Log the test result
-    const { error: logError } = await supabase.from('scraping_logs').insert({
-      source_id: null,
+    const responseData = {
+      success: result.success,
+      message: result.success ? 
+        `Successfully extracted ${result.schedules.length} schedule types` : 
+        `Failed: ${result.error}`,
       execution_id: executionId,
-      status: result.success ? 'completed' : 'error',
-      lines_found: result.schedules.length,
-      lines_processed: result.schedules.length,
-      lines_updated: result.success ? result.schedules.length : 0,
-      lines_failed: result.success ? 0 : 1,
-      error_message: result.error,
-      execution_details: {
-        test_url,
-        scraping_test: true,
+      test_result: {
+        url: test_url,
+        schedules_found: result.schedules.length,
+        schedule_types: result.schedules.map(s => ({ type: s.tipo, times_count: s.horarios.length })),
         metadata: result.metadata,
-        timestamp: new Date().toISOString()
-      }
-    });
-
-    if (logError) {
-      console.error('Log insert error:', logError);
-    }
+        error: result.error
+      },
+      detailed_schedules: result.schedules
+    };
+    
+    console.log('Sending response:', JSON.stringify(responseData, null, 2));
     
     return new Response(
-      JSON.stringify({
-        success: result.success,
-        message: result.success ? 
-          `Successfully extracted ${result.schedules.length} schedule types from ${test_url}` : 
-          `Failed to extract schedules: ${result.error}`,
-        execution_id: executionId,
-        test_result: {
-          url: test_url,
-          schedules_found: result.schedules.length,
-          schedule_types: result.schedules.map(s => ({ type: s.tipo, times_count: s.horarios.length })),
-          metadata: result.metadata,
-          error: result.error
-        },
-        detailed_schedules: result.schedules
-      }),
+      JSON.stringify(responseData),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: result.success ? 200 : 400
+        status: 200  // Always return 200 to avoid client-side errors
       }
     );
 
   } catch (error) {
-    console.error('Error in enhanced test-scrape function:', error);
+    console.error('Top-level error:', error);
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error.message 
+        error: `Server error: ${error.message}`,
+        stack: error.stack
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
