@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Lock, User, Bus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useAnalytics } from '@/hooks/useAnalytics';
 
 const AdminLogin = () => {
   const [username, setUsername] = useState('');
@@ -14,6 +15,7 @@ const AdminLogin = () => {
   const [error, setError] = useState('');
   const navigate = useNavigate();
   const { toast } = useToast();
+  const analytics = useAnalytics();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,6 +27,7 @@ const AdminLogin = () => {
 
     if (username === 'admin' && password === 'Lizvitoria@2023') {
       localStorage.setItem('adminAuth', 'true');
+      analytics.trackLogin();
       toast({
         title: "✅ Login realizado com sucesso",
         description: "Bem-vindo ao painel administrativo!",

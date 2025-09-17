@@ -7,6 +7,7 @@ import { ScrapingManager } from '@/components/ScrapingManager';
 import { Bus, LogOut, Settings, Database, Download, Upload } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
+import { useAnalytics } from '@/hooks/useAnalytics';
 import busLinesData from '@/data/bus-lines.json';
 
 interface ExtractedSchedule {
@@ -26,16 +27,20 @@ const AdminPanel = () => {
   const [busLines, setBusLines] = useState(busLinesData as BusLine[]);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const analytics = useAnalytics();
 
   useEffect(() => {
     const isAuthenticated = localStorage.getItem('adminAuth');
     if (!isAuthenticated) {
       navigate('/admin/login');
+    } else {
+      analytics.trackPageView('Admin Panel');
     }
-  }, [navigate]);
+  }, [navigate, analytics]);
 
   const handleLogout = () => {
     localStorage.removeItem('adminAuth');
+    analytics.trackLogout();
     toast({
       title: "Logout realizado",
       description: "Você foi desconectado do painel administrativo.",
@@ -59,6 +64,7 @@ const AdminPanel = () => {
           try {
             const data = JSON.parse(event.target?.result as string);
             setBusLines(data);
+            analytics.trackDataImport(data.length);
             toast({
               title: "✅ Dados importados",
               description: `${data.length} linhas importadas com sucesso.`,
@@ -86,6 +92,7 @@ const AdminPanel = () => {
     link.download = `bus-lines-backup-${new Date().toISOString().split('T')[0]}.json`;
     link.click();
     URL.revokeObjectURL(url);
+    analytics.trackDataExport(busLines.length);
   };
 
   const linesWithSchedules = busLines.filter(line => line.schedulesDetailed?.length).length;
