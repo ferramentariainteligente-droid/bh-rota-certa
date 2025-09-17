@@ -71,7 +71,7 @@ export const ScrapingManager = () => {
   const [isRunning, setIsRunning] = useState(false);
   const [currentExecution, setCurrentExecution] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('sources');
-  const [testUrl, setTestUrl] = useState('https://movemetropolitano.com.br/4211-terminal-sao-benedito-circular-conjunto-cristina');
+  const [testUrl, setTestUrl] = useState('');
   const [testResult, setTestResult] = useState<any>(null);
   const [isTesting, setIsTesting] = useState(false);
 
@@ -448,26 +448,6 @@ export const ScrapingManager = () => {
             <RefreshCw className="w-4 h-4" />
             Ver Página Principal
           </Button>
-
-          <Button 
-            onClick={async () => {
-              setIsTesting(true);
-              try {
-                await testUrlScraping();
-                // Also test the specific 4211 line
-                setTestUrl("https://movemetropolitano.com.br/4211-terminal-sao-benedito-circular-conjunto-cristina");
-                await testUrlScraping();
-              } finally {
-                setIsTesting(false);
-              }
-            }}
-            variant="outline"
-            className="flex items-center gap-2"
-            disabled={isTesting}
-          >
-            <Bug className="w-4 h-4" />
-            {isTesting ? 'Testando 4211...' : 'Testar Linha 4211'}
-          </Button>
           </div>
 
           {isRunning && currentExecution && (
@@ -664,15 +644,15 @@ export const ScrapingManager = () => {
                 <div className="space-y-1 text-sm">
                   <div 
                     className="cursor-pointer hover:text-primary"
-                    onClick={() => setTestUrl('https://movemetropolitano.com.br/4211-terminal-sao-benedito-circular-conjunto-cristina')}
-                  >
-                    • https://movemetropolitano.com.br/4211-terminal-sao-benedito-circular-conjunto-cristina
-                  </div>
-                  <div 
-                    className="cursor-pointer hover:text-primary"
                     onClick={() => setTestUrl('https://movemetropolitano.com.br/5889-vila-maria-terminal-vilarinho')}
                   >
                     • https://movemetropolitano.com.br/5889-vila-maria-terminal-vilarinho
+                  </div>
+                  <div 
+                    className="cursor-pointer hover:text-primary"
+                    onClick={() => setTestUrl('https://movemetropolitano.com.br/402h-terminal-sao-gabriel-hospitais')}
+                  >
+                    • https://movemetropolitano.com.br/402h-terminal-sao-gabriel-hospitais
                   </div>
                 </div>
               </div>

@@ -165,7 +165,6 @@ const Landing = () => {
                 <div>
                   <h3 className="text-xl font-semibold mb-4">Principais linhas consultadas</h3>
                   <div className="space-y-2">
-                    <Badge variant="outline">Linha 4211 - Centro/Barreiro</Badge>
                     <Badge variant="outline">Linha 5104 - Pampulha/Centro</Badge>
                     <Badge variant="outline">Linha 9202 - Venda Nova/Centro</Badge>
                     <Badge variant="outline">Linha 1303 - Betim/BH</Badge>
