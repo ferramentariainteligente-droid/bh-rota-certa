@@ -41,14 +41,24 @@ const Index = () => {
       {/* Header */}
       <header className="bg-gradient-primary shadow-soft">
         <div className="container mx-auto px-4 py-6">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="p-2 bg-white/20 rounded-xl backdrop-blur-sm">
-              <Bus className="h-8 w-8 text-white" />
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-white/20 rounded-xl backdrop-blur-sm">
+                <Bus className="h-8 w-8 text-white" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-white">BH Ônibus</h1>
+                <p className="text-white/90 text-sm">Horários de Belo Horizonte</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-3xl font-bold text-white">BH Ônibus</h1>
-              <p className="text-white/90 text-sm">Horários de Belo Horizonte</p>
-            </div>
+            
+            {/* Admin Button */}
+            <a 
+              href="/admin/login" 
+              className="inline-block px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-smooth font-medium text-sm"
+            >
+              🔐 Admin
+            </a>
           </div>
           
           <SearchBar 
@@ -167,14 +177,6 @@ const Index = () => {
           </div>
           <div className="border-t mt-6 pt-6 text-center text-sm text-muted-foreground">
             <p>© 2024 BH Ônibus - Todos os direitos reservados</p>
-            <div className="mt-3">
-              <a 
-                href="/admin/login" 
-                className="inline-block px-3 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600 transition-smooth font-medium"
-              >
-                🔐 Admin
-              </a>
-            </div>
           </div>
         </div>
       </footer>
