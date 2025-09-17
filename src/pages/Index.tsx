@@ -91,6 +91,24 @@ const Index = () => {
           </div>
         </section>
 
+      {/* Data Updater Section */}
+      <section className="py-8 px-4 bg-muted/20">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-6">
+            <h2 className="text-xl font-bold text-foreground mb-2">
+              🔄 Atualizar Horários por Dia da Semana
+            </h2>
+            <p className="text-muted-foreground text-sm">
+              Capture horários detalhados (Segunda-Sexta, Sábado, Domingo/Feriados) dos sites oficiais
+            </p>
+          </div>
+          <BusDataUpdater 
+            busLines={busLines}
+            onUpdateComplete={handleUpdateComplete}
+          />
+        </div>
+      </section>
+
       {/* Ad Space - Top */}
       <AdSpace position="top" />
 
@@ -141,23 +159,6 @@ const Index = () => {
 
       </main>
 
-      {/* Data Updater Section */}
-      <section className="py-12 px-4">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-8">
-            <h2 className="text-2xl font-bold text-foreground mb-2">
-              🔄 Atualizar Dados das Linhas
-            </h2>
-            <p className="text-muted-foreground">
-              Capture horários detalhados por dia da semana dos sites oficiais
-            </p>
-          </div>
-          <BusDataUpdater 
-            busLines={busLines}
-            onUpdateComplete={handleUpdateComplete}
-          />
-        </div>
-      </section>
 
       {/* Ad Space - Bottom */}
       <AdSpace position="bottom" />
