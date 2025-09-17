@@ -230,6 +230,43 @@ Deno.serve(async (req) => {
     console.log(`Testing URL scraping: ${test_url}`);
     const result = await testScrapeBusSchedules(test_url);
     
+    // If successful, also try to update the database with real data
+    if (result.success && result.schedules.length > 0) {
+      try {
+        const pathParts = new URL(test_url).pathname.split('-');
+        const lineCode = pathParts[0].replace('/', '');
+        const lineName = pathParts.slice(1).join(' ').replace(/-/g, ' ');
+        
+        // Update or insert real scraped data
+        const { error: updateError } = await supabase.from('scraped_bus_lines').upsert({
+          source_id: null, // Will be updated later
+          line_code: lineCode,
+          line_name: lineName,
+          line_url: test_url,
+          route_description: `${lineCode} - ${lineName}`,
+          last_scraped_at: new Date().toISOString(),
+          scraping_status: 'success',
+          schedule_data: { schedules: result.schedules },
+          metadata: {
+            schedules_count: result.schedules.length,
+            total_times: result.schedules.reduce((acc, s) => acc + s.horarios.length, 0),
+            scraping_method: 'real_time_test',
+            test_timestamp: new Date().toISOString()
+          }
+        }, {
+          onConflict: 'line_url'
+        });
+
+        if (updateError) {
+          console.error('Error updating scraped data:', updateError);
+        } else {
+          console.log(`Successfully updated database with real scraped data for ${lineCode}`);
+        }
+      } catch (dbError) {
+        console.error('Database update error:', dbError);
+      }
+    }
+    
     // Log the test result
     const { error: logError } = await supabase.from('scraping_logs').insert({
       source_id: null,

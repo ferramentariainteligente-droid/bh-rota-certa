@@ -435,6 +435,18 @@ export const ScrapingManager = () => {
               <RefreshCw className="w-4 h-4" />
               Atualizar Dados
             </Button>
+
+            <Button 
+              onClick={() => {
+                // Force refresh of integrated data
+                window.location.href = '/';
+              }}
+              variant="secondary"
+              className="flex items-center gap-2"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Ver Página Principal
+            </Button>
           </div>
 
           {isRunning && currentExecution && (

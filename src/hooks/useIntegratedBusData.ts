@@ -49,6 +49,8 @@ export const useIntegratedBusData = () => {
         console.error('Error loading scraped data:', scrapedError);
       }
 
+      console.log('Scraped data loaded:', scrapedData);
+
       // Start with JSON data
       const jsonLines = [...busLinesData] as BusLine[];
       
@@ -63,6 +65,8 @@ export const useIntegratedBusData = () => {
             scraped.line_name.toLowerCase()
           ];
           
+          console.log(`Creating map keys for ${scraped.line_code}:`, keys);
+          
           keys.forEach(key => {
             if (key) {
               scrapedMap.set(key, scraped);
@@ -70,6 +74,9 @@ export const useIntegratedBusData = () => {
           });
         });
       }
+
+      console.log('Scraped map size:', scrapedMap.size);
+      console.log('Scraped map keys:', Array.from(scrapedMap.keys()));
 
       // Merge JSON data with scraped data
       const integratedLines = jsonLines.map(jsonLine => {
@@ -79,6 +86,7 @@ export const useIntegratedBusData = () => {
         // Strategy 1: Match by URL
         if (jsonLine.url && scrapedMap.has(jsonLine.url)) {
           matchedScraped = scrapedMap.get(jsonLine.url);
+          console.log(`URL match found for ${jsonLine.url}`);
         }
         
         // Strategy 2: Match by line number extracted from title
@@ -86,7 +94,10 @@ export const useIntegratedBusData = () => {
           const lineNumberMatch = jsonLine.linha.match(/^(\d+[A-Z]?)/);
           if (lineNumberMatch) {
             const lineNumber = lineNumberMatch[1];
-            matchedScraped = scrapedMap.get(lineNumber);
+            if (scrapedMap.has(lineNumber)) {
+              matchedScraped = scrapedMap.get(lineNumber);
+              console.log(`Line number match found for ${lineNumber}`);
+            }
           }
         }
         
@@ -96,6 +107,7 @@ export const useIntegratedBusData = () => {
             if (key.includes(jsonLine.url.split('/').pop() || '') || 
                 jsonLine.url.includes(scraped.line_url.split('/').pop() || '')) {
               matchedScraped = scraped;
+              console.log(`Partial URL match found for ${jsonLine.url}`);
               break;
             }
           }
@@ -105,6 +117,7 @@ export const useIntegratedBusData = () => {
         if (matchedScraped) {
           const scheduleData = matchedScraped.schedule_data as any;
           if (scheduleData && scheduleData.schedules && Array.isArray(scheduleData.schedules)) {
+            console.log(`Using scraped schedules for ${jsonLine.linha}:`, scheduleData.schedules);
             return {
               ...jsonLine,
               schedulesDetailed: scheduleData.schedules,
