@@ -6,6 +6,7 @@ import Index from "./pages/Index";
 import Landing from "./pages/Landing";
 import AdminLogin from "./pages/AdminLogin";
 import AdminPanel from "./pages/AdminPanel";
+import Map from "./pages/Map";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
 import Privacy from "./pages/Privacy";
@@ -20,6 +21,7 @@ const App = () => (
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/horarios" element={<Index />} />
+        <Route path="/mapa" element={<Map />} />
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin" element={<AdminPanel />} />
         <Route path="/sobre" element={<About />} />

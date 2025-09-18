@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Clock, Search, MapPin, Smartphone, CheckCircle, Star } from "lucide-react";
+import { Clock, Search, MapPin, Smartphone, CheckCircle, Star, Map } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const Landing = () => {
@@ -16,11 +16,19 @@ const Landing = () => {
             </div>
             <span className="text-xl font-bold">BH Ônibus</span>
           </div>
-          <Link to="/horarios">
-            <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-lg hover:shadow-xl transition-all duration-200">
-              Acessar Sistema
-            </Button>
-          </Link>
+          <div className="flex gap-2">
+            <Link to="/mapa">
+              <Button variant="outline" size="sm" className="hidden sm:flex">
+                <Map className="h-4 w-4 mr-2" />
+                Mapa
+              </Button>
+            </Link>
+            <Link to="/horarios">
+              <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-lg hover:shadow-xl transition-all duration-200">
+                Acessar Sistema
+              </Button>
+            </Link>
+          </div>
         </nav>
       </header>
 
@@ -48,21 +56,12 @@ const Landing = () => {
                   Consultar Horários Agora
                 </Button>
               </Link>
-              <Button variant="outline" size="lg" className="w-full sm:w-auto" onClick={() => {
-                if (navigator.share) {
-                  navigator.share({
-                    title: 'BH Ônibus - Horários da RMBH',
-                    text: 'Consulte horários de ônibus da região metropolitana de BH',
-                    url: window.location.href
-                  });
-                } else {
-                  navigator.clipboard.writeText(window.location.href);
-                  alert('Link copiado para a área de transferência!');
-                }
-              }}>
-                <Smartphone className="mr-2 h-4 w-4" />
-                Salvar nos Favoritos
-              </Button>
+              <Link to="/mapa">
+                <Button variant="outline" size="lg" className="w-full sm:w-auto">
+                  <Map className="mr-2 h-4 w-4" />
+                  Ver Mapa Interativo
+                </Button>
+              </Link>
             </div>
 
             {/* Trust indicators */}
@@ -95,7 +94,7 @@ const Landing = () => {
               </p>
             </div>
 
-            <div className="grid md:grid-cols-3 gap-8">
+            <div className="grid md:grid-cols-4 gap-8">
               <Card className="text-center">
                 <CardContent className="pt-6">
                   <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mx-auto mb-4">
@@ -128,6 +127,18 @@ const Landing = () => {
                   <h3 className="text-xl font-semibold mb-2">Cobertura Completa</h3>
                   <p className="text-muted-foreground">
                     Todas as linhas de ônibus da RMBH: BH, Contagem, Betim, Nova Lima, Ribeirão das Neves e mais
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card className="text-center">
+                <CardContent className="pt-6">
+                  <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mx-auto mb-4">
+                    <Map className="h-6 w-6 text-primary" />
+                  </div>
+                  <h3 className="text-xl font-semibold mb-2">Mapa Interativo</h3>
+                  <p className="text-muted-foreground">
+                    Visualize rotas e pontos de parada em um mapa interativo com sua localização
                   </p>
                 </CardContent>
               </Card>
@@ -208,6 +219,7 @@ const Landing = () => {
               Consulte horários de ônibus da região metropolitana de BH de forma rápida e gratuita
             </p>
             <div className="flex justify-center space-x-6 text-sm">
+              <Link to="/mapa" className="text-muted-foreground hover:text-primary">Mapa</Link>
               <Link to="/sobre" className="text-muted-foreground hover:text-primary">Sobre</Link>
               <Link to="/contato" className="text-muted-foreground hover:text-primary">Contato</Link>
               <Link to="/privacidade" className="text-muted-foreground hover:text-primary">Privacidade</Link>
