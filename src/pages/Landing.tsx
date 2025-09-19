@@ -3,8 +3,15 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Clock, Search, MapPin, Smartphone, CheckCircle, Star, Map } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useEffect } from 'react';
+import { useVisitorStats } from '@/hooks/useVisitorStats';
 
 const Landing = () => {
+  const { trackPageView } = useVisitorStats();
+  
+  useEffect(() => {
+    trackPageView('/');
+  }, [trackPageView]);
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
       {/* SEO optimized header */}

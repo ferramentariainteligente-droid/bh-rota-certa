@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { MapPin, Navigation, Bus, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,17 +7,20 @@ import { BusMap } from '@/components/BusMap';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { useIntegratedBusData } from '@/hooks/useIntegratedBusData';
 import { useAnalytics } from '@/hooks/useAnalytics';
+import { useVisitorStats } from '@/hooks/useVisitorStats';
 
 const Map = () => {
   const { busLines, loading } = useIntegratedBusData();
   const { position, error: geoError, getCurrentPosition } = useGeolocation();
   const analytics = useAnalytics();
+  const { trackPageView } = useVisitorStats();
   const [selectedLine, setSelectedLine] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     analytics.trackPageView('Interactive Map');
-  }, [analytics]);
+    trackPageView('/mapa');
+  }, [analytics, trackPageView]);
 
   const handleLocationRequest = () => {
     getCurrentPosition();

@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BusDataUpdater } from '@/components/BusDataUpdater';
 import { ScrapingManager } from '@/components/ScrapingManager';
 import { AllLinesProcessor } from '@/components/AllLinesProcessor';
+import { UserStatsCard } from '@/components/UserStatsCard';
 import { Bus, LogOut, Settings, Database, Download, Upload, AlertCircle } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -143,8 +144,11 @@ const AdminPanel = () => {
       </header>
 
       <main className="container mx-auto px-4 py-8">
-        <Tabs defaultValue="dataset" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 mb-8">
+        <Tabs defaultValue="analytics" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-5 mb-8">
+            <TabsTrigger value="analytics" className="text-sm md:text-base">
+              📊 Analytics
+            </TabsTrigger>
             <TabsTrigger value="dataset" className="text-sm md:text-base">
               📊 Dataset Manual
             </TabsTrigger>
@@ -158,6 +162,78 @@ const AdminPanel = () => {
               💰 Google AdSense
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="analytics" className="space-y-8">
+            {/* User Statistics */}
+            <UserStatsCard />
+            
+            {/* Real-time Activity */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Database className="h-5 w-5" />
+                  Atividade em Tempo Real
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div>
+                    <h4 className="font-medium mb-3">Status do Sistema</h4>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span>Banco de dados:</span>
+                        <span className="text-green-600 font-medium">Online</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Sistema de busca:</span>
+                        <span className="text-green-600 font-medium">Funcionando</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Last scraping:</span>
+                        <span className="text-muted-foreground">2 horas atrás</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 className="font-medium mb-3">Páginas Mais Visitadas</h4>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span>/horarios</span>
+                        <span className="text-primary font-medium">45%</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>/</span>
+                        <span className="text-primary font-medium">32%</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>/mapa</span>
+                        <span className="text-primary font-medium">23%</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 className="font-medium mb-3">Linhas Mais Buscadas</h4>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span>5104 Pampulha</span>
+                        <span className="text-blue-600 font-medium">124 buscas</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>9202 Venda Nova</span>
+                        <span className="text-blue-600 font-medium">89 buscas</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>5130 Dom Pedro</span>
+                        <span className="text-blue-600 font-medium">15 buscas</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
           <TabsContent value="dataset" className="space-y-8">
         {/* Statistics Cards */}

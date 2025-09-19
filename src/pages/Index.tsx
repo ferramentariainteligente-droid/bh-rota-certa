@@ -6,11 +6,18 @@ import { PWAPrompt } from "@/components/PWAPrompt";
 import { LocationSuggestions } from "@/components/LocationSuggestions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useEffect } from 'react';
 
 import { useIntegratedBusData } from '@/hooks/useIntegratedBusData';
 import { useBusSearch } from "@/hooks/useBusSearch";
+import { useVisitorStats } from '@/hooks/useVisitorStats';
 
 const Index = () => {
+  const { trackPageView } = useVisitorStats();
+  
+  useEffect(() => {
+    trackPageView('/horarios');
+  }, [trackPageView]);
   const { 
     busLines, 
     loading, 
