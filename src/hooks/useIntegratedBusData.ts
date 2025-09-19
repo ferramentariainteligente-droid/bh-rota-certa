@@ -66,14 +66,27 @@ export const useIntegratedBusData = () => {
       
       // Add lines from database
       if (dbBusLines) {
+        console.log(`Adding ${dbBusLines.length} lines from database`);
         dbBusLines.forEach(dbLine => {
-          // Convert database format to expected format
-          jsonLines.push({
-            url: dbLine.official_url,
-            linha: `${dbLine.line_number} ${dbLine.route_name}`,
-            horarios: [], // Will be filled from scraped data if available
-            lastUpdated: dbLine.updated_at
-          });
+          // Check if line already exists in JSON data
+          const existsInJson = jsonLines.some(line => 
+            line.linha.includes(dbLine.line_number) ||
+            line.url === dbLine.official_url
+          );
+
+          if (!existsInJson) {
+            // Convert database format to expected format
+            const newLine = {
+              url: dbLine.official_url,
+              linha: `${dbLine.line_number} ${dbLine.route_name}`,
+              horarios: [],
+              lastUpdated: dbLine.updated_at
+            };
+            jsonLines.push(newLine);
+            console.log(`Added line from database: ${newLine.linha}`);
+          } else {
+            console.log(`Line ${dbLine.line_number} already exists in JSON data`);
+          }
         });
       }
       
@@ -179,6 +192,7 @@ export const useIntegratedBusData = () => {
 
       setBusLines(integratedLines);
       console.log(`Integrated data: ${integratedLines.length} total lines, ${integratedLines.filter(l => l.schedulesDetailed?.length).length} with detailed schedules`);
+      console.log('Lines containing 5130:', integratedLines.filter(line => line.linha.includes('5130')));
 
     } catch (err) {
       console.error('Error loading integrated bus data:', err);
