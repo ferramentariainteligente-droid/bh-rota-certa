@@ -39,6 +39,15 @@ export const useIntegratedBusData = () => {
     try {
       setLoading(true);
       
+      // Load bus lines from database
+      const { data: dbBusLines, error: dbError } = await supabase
+        .from('bus_lines')
+        .select('*');
+
+      if (dbError) {
+        console.error('Error loading bus lines from database:', dbError);
+      }
+
       // Load scraped data from database
       const { data: scrapedData, error: scrapedError } = await supabase
         .from('scraped_bus_lines')
@@ -49,10 +58,24 @@ export const useIntegratedBusData = () => {
         console.error('Error loading scraped data:', scrapedError);
       }
 
+      console.log('Database bus lines loaded:', dbBusLines);
       console.log('Scraped data loaded:', scrapedData);
 
-      // Start with JSON data
+      // Start with JSON data and add database lines
       const jsonLines = [...busLinesData] as BusLine[];
+      
+      // Add lines from database
+      if (dbBusLines) {
+        dbBusLines.forEach(dbLine => {
+          // Convert database format to expected format
+          jsonLines.push({
+            url: dbLine.official_url,
+            linha: `${dbLine.line_number} ${dbLine.route_name}`,
+            horarios: [], // Will be filled from scraped data if available
+            lastUpdated: dbLine.updated_at
+          });
+        });
+      }
       
       // Create a map of scraped data by line identifier
       const scrapedMap = new Map<string, ScrapedBusLine>();
