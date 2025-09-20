@@ -266,12 +266,204 @@ export type Database = {
         }
         Relationships: []
       }
+      search_history: {
+        Row: {
+          created_at: string
+          id: string
+          results_count: number | null
+          search_term: string
+          search_type: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          results_count?: number | null
+          search_term: string
+          search_type?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          results_count?: number | null
+          search_term?: string
+          search_type?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      shared_schedules: {
+        Row: {
+          bus_line_data: Json
+          created_at: string
+          created_by: string | null
+          description: string | null
+          expires_at: string | null
+          id: string
+          share_code: string
+          title: string | null
+          view_count: number | null
+        }
+        Insert: {
+          bus_line_data: Json
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          share_code?: string
+          title?: string | null
+          view_count?: number | null
+        }
+        Update: {
+          bus_line_data?: Json
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          share_code?: string
+          title?: string | null
+          view_count?: number | null
+        }
+        Relationships: []
+      }
+      user_favorites: {
+        Row: {
+          bus_line_name: string
+          bus_line_number: string
+          bus_line_url: string
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          bus_line_name: string
+          bus_line_number: string
+          bus_line_url: string
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          bus_line_name?: string
+          bus_line_number?: string
+          bus_line_url?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_notifications: {
+        Row: {
+          action_url: string | null
+          created_at: string
+          id: string
+          is_read: boolean | null
+          message: string
+          title: string
+          type: string | null
+          user_id: string
+        }
+        Insert: {
+          action_url?: string | null
+          created_at?: string
+          id?: string
+          is_read?: boolean | null
+          message: string
+          title: string
+          type?: string | null
+          user_id: string
+        }
+        Update: {
+          action_url?: string | null
+          created_at?: string
+          id?: string
+          is_read?: boolean | null
+          message?: string
+          title?: string
+          type?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          display_name: string | null
+          email: string | null
+          id: string
+          notification_preferences: Json | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          email?: string | null
+          id?: string
+          notification_preferences?: Json | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          email?: string | null
+          id?: string
+          notification_preferences?: Json | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_ratings: {
+        Row: {
+          bus_line_number: string
+          bus_line_url: string
+          comment: string | null
+          created_at: string
+          id: string
+          rating: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          bus_line_number: string
+          bus_line_url: string
+          comment?: string | null
+          created_at?: string
+          id?: string
+          rating: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          bus_line_number?: string
+          bus_line_url?: string
+          comment?: string | null
+          created_at?: string
+          id?: string
+          rating?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      generate_share_code: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
     }
     Enums: {
       report_status: "pendente" | "analisando" | "resolvido" | "rejeitado"
