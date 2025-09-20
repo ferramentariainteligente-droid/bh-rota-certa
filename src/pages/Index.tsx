@@ -11,6 +11,9 @@ import { useEffect } from 'react';
 import { useIntegratedBusData } from '@/hooks/useIntegratedBusData';
 import { useBusSearch } from "@/hooks/useBusSearch";
 import { useVisitorStats } from '@/hooks/useVisitorStats';
+import { AuthButton } from '@/components/AuthButton';
+import { ThemeToggle } from '@/components/ThemeToggle';
+import { NotificationCenter } from '@/components/NotificationCenter';
 
 const Index = () => {
   const { trackPageView } = useVisitorStats();
