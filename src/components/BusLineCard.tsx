@@ -7,6 +7,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BusDataExtractor } from "@/services/BusDataExtractor";
 import { ScheduleAlert } from "@/components/ScheduleAlert";
 import { ReportErrorForm } from "./ReportErrorForm";
+import { FavoriteButton } from "./FavoriteButton";
+import { RatingDialog } from "./RatingDialog";
+import { ShareDialog } from "./ShareDialog";
 
 interface ExtractedSchedule {
   tipo: string;
@@ -159,15 +162,18 @@ export const BusLineCard = ({ line }: BusLineCardProps) => {
               {route}
             </h3>
           </div>
-          <a
-            href={line.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="p-2 text-muted-foreground hover:text-primary transition-smooth"
-            title="Ver no site oficial"
-          >
-            <ExternalLink className="h-4 w-4" />
-          </a>
+          <div className="flex items-center gap-1">
+            <FavoriteButton busLine={line} />
+            <a
+              href={line.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-2 text-muted-foreground hover:text-primary transition-smooth"
+              title="Ver no site oficial"
+            >
+              <ExternalLink className="h-4 w-4" />
+            </a>
+          </div>
         </div>
 
         {/* Schedule Display */}
@@ -226,7 +232,27 @@ export const BusLineCard = ({ line }: BusLineCardProps) => {
             <MapPin className="h-3 w-3" />
             <span>Move Metropolitano</span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <RatingDialog busLine={line}>
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+              >
+                Avaliar
+              </Button>
+            </RatingDialog>
+            
+            <ShareDialog busLine={line}>
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-green-600 hover:text-green-700 hover:bg-green-50"
+              >
+                Compartilhar
+              </Button>
+            </ShareDialog>
+            
             <Button
               variant="outline"
               size="sm"

@@ -79,6 +79,13 @@ const Index = () => {
                 )}
               </div>
               
+              {/* User Actions */}
+              <div className="flex items-center gap-2">
+                <NotificationCenter />
+                <ThemeToggle />
+                <AuthButton />
+              </div>
+              
               {/* Refresh Button */}
               <Button
                 onClick={refreshData}
