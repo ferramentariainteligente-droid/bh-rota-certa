@@ -192,7 +192,9 @@ export const useIntegratedBusData = () => {
 
       setBusLines(integratedLines);
       console.log(`Integrated data: ${integratedLines.length} total lines, ${integratedLines.filter(l => l.schedulesDetailed?.length).length} with detailed schedules`);
-      console.log('Lines containing 5130:', integratedLines.filter(line => line.linha.includes('5130')));
+      console.log('Lines containing 5142:', integratedLines.filter(line => line.linha.includes('5142')));
+      console.log('All line codes found:', integratedLines.map(line => line.linha).slice(0, 10));
+      console.log('5142 specific check:', integratedLines.find(line => line.linha.includes('5142')));
 
     } catch (err) {
       console.error('Error loading integrated bus data:', err);
