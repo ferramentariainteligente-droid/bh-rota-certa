@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 interface VisitorStats {
   totalVisitors: number;
@@ -80,7 +80,7 @@ export const useVisitorStats = () => {
     return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   };
 
-  const loadStats = () => {
+  const loadStats = useCallback(() => {
     const visitorData = JSON.parse(localStorage.getItem('visitor_data') || '{}');
     const sessions = JSON.parse(localStorage.getItem('sessions') || '[]');
     const pageViews = JSON.parse(localStorage.getItem('page_views') || '[]');
@@ -108,10 +108,10 @@ export const useVisitorStats = () => {
       pageViews: pageViews.length,
       averageSessionTime: Math.round(avgSessionTime * 100) / 100,
     });
-  };
+  }, []);
 
   // Track page view
-  const trackPageView = (page: string) => {
+  const trackPageView = useCallback((page: string) => {
     const now = new Date();
     const sessionId = sessionStorage.getItem('session_id');
     
@@ -124,9 +124,9 @@ export const useVisitorStats = () => {
       });
       
       localStorage.setItem('page_views', JSON.stringify(pageViews.slice(-1000)));
-      loadStats();
+      // Don't call loadStats here to avoid infinite loops
     }
-  };
+  }, []);
 
   return {
     stats,
