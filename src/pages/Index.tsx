@@ -20,7 +20,7 @@ const Index = () => {
   
   useEffect(() => {
     trackPageView('/horarios');
-  }, [trackPageView]);
+  }, []); // Empty dependency array to avoid infinite loop
   const { 
     busLines, 
     loading, 
