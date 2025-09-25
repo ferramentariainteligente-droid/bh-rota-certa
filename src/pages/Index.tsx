@@ -14,6 +14,9 @@ import { useVisitorStats } from '@/hooks/useVisitorStats';
 import { AuthButton } from '@/components/AuthButton';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { NotificationCenter } from '@/components/NotificationCenter';
+import { UpdateManager } from '@/components/UpdateManager';
+import { TestUpdateButton } from '@/components/TestUpdateButton';
+import { Dialog, DialogContent, DialogTrigger, DialogTitle } from '@/components/ui/dialog';
 
 const Index = () => {
   const { trackPageView } = useVisitorStats();
@@ -86,6 +89,24 @@ const Index = () => {
                 <AuthButton />
               </div>
               
+              {/* Update Manager Dialog */}
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-white hover:bg-white/20"
+                    title="Sistema de atualização"
+                  >
+                    <Database className="w-4 h-4" />
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                  <DialogTitle>Sistema de Atualização</DialogTitle>
+                  <UpdateManager />
+                </DialogContent>
+              </Dialog>
+              
               {/* Refresh Button */}
               <Button
                 onClick={refreshData}
@@ -93,7 +114,7 @@ const Index = () => {
                 variant="ghost"
                 size="sm"
                 className="text-white hover:bg-white/20"
-                title="Atualizar dados"
+                title="Atualizar dados locais"
               >
                 <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
               </Button>
@@ -192,6 +213,7 @@ const Index = () => {
                     {linesWithSchedules} com horários categorizados
                   </Badge>
                 )}
+                <TestUpdateButton />
               </div>
               {hasFilters && (
                 <button
