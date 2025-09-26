@@ -6,7 +6,8 @@ import { PWAPrompt } from "@/components/PWAPrompt";
 import { LocationSuggestions } from "@/components/LocationSuggestions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useEffect } from 'react';
+import { LoadingStates } from "@/components/LoadingStates";
+import { useEffect, useState } from 'react';
 
 import { useIntegratedBusData } from '@/hooks/useIntegratedBusData';
 import { useBusSearch } from "@/hooks/useBusSearch";
@@ -16,10 +17,18 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 import { NotificationCenter } from '@/components/NotificationCenter';
 import { UpdateManager } from '@/components/UpdateManager';
 import { TestUpdateButton } from '@/components/TestUpdateButton';
+import { AdvancedFilters, type FilterConfig } from '@/components/AdvancedFilters';
 import { Dialog, DialogContent, DialogTrigger, DialogTitle } from '@/components/ui/dialog';
 
 const Index = () => {
   const { trackPageView } = useVisitorStats();
+  const [advancedFilters, setAdvancedFilters] = useState<FilterConfig>({
+    regions: [],
+    timeRanges: [],
+    lineTypes: [],
+    hasSchedules: null,
+    sortBy: 'line_number'
+  });
   
   useEffect(() => {
     trackPageView('/horarios');
@@ -176,12 +185,7 @@ const Index = () => {
 
       <main className="container mx-auto px-4 py-6">
         {/* Loading State */}
-        {loading && (
-          <div className="text-center py-12">
-            <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-4 text-muted-foreground" />
-            <p className="text-muted-foreground">Carregando horários atualizados...</p>
-          </div>
-        )}
+        {loading && <LoadingStates type="bus-lines" count={5} />}
 
         {/* Error State */}
         {error && (
@@ -201,9 +205,9 @@ const Index = () => {
         {/* Results Section */}
         {!loading && !error && (
           <>
-            {/* Results Summary */}
+            {/* Results Summary and Filters */}
             <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
                 <Sparkles className="h-5 w-5 text-primary" />
                 <h2 className="text-xl font-semibold">
                   {filteredBusLines.length} linhas encontradas
@@ -213,16 +217,22 @@ const Index = () => {
                     {linesWithSchedules} com horários categorizados
                   </Badge>
                 )}
-                <TestUpdateButton />
               </div>
-              {hasFilters && (
-                <button
-                  onClick={clearFilters}
-                  className="text-sm text-muted-foreground hover:text-foreground transition-smooth"
-                >
-                  Limpar filtros
-                </button>
-              )}
+              
+              <div className="flex items-center gap-2">
+                <AdvancedFilters
+                  onFiltersChange={setAdvancedFilters}
+                />
+                <TestUpdateButton />
+                {hasFilters && (
+                  <button
+                    onClick={clearFilters}
+                    className="text-sm text-muted-foreground hover:text-foreground transition-smooth"
+                  >
+                    Limpar busca
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* Bus Lines Grid */}

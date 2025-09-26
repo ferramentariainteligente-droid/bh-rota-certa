@@ -1,192 +1,273 @@
 import { useState } from 'react';
+import { Filter, X, Clock, MapPin, Route } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Slider } from '@/components/ui/slider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Filter, X } from 'lucide-react';
 
 interface AdvancedFiltersProps {
-  onFiltersChange: (filters: FilterState) => void;
-  activeFilters: FilterState;
+  onFiltersChange: (filters: FilterConfig) => void;
 }
 
-export interface FilterState {
-  timeRange: {
-    start: number;
-    end: number;
-  };
-  hasSchedules: boolean;
-  sortBy: 'name' | 'updated' | 'schedule_count';
-  sortOrder: 'asc' | 'desc';
-  onlyFavorites: boolean;
-  minRating: number;
+export interface FilterConfig {
+  regions: string[];
+  timeRanges: string[];
+  lineTypes: string[];
+  hasSchedules: boolean | null;
+  sortBy: string;
 }
 
-export const AdvancedFilters = ({ onFiltersChange, activeFilters }: AdvancedFiltersProps) => {
-  const [open, setOpen] = useState(false);
-  const [localFilters, setLocalFilters] = useState<FilterState>(activeFilters);
+const defaultFilters: FilterConfig = {
+  regions: [],
+  timeRanges: [],
+  lineTypes: [],
+  hasSchedules: null,
+  sortBy: 'line_number'
+};
 
-  const handleApplyFilters = () => {
-    onFiltersChange(localFilters);
-    setOpen(false);
+export const AdvancedFilters = ({ onFiltersChange }: AdvancedFiltersProps) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [filters, setFilters] = useState<FilterConfig>(defaultFilters);
+
+  const regions = [
+    { id: 'bh', name: 'Belo Horizonte', color: 'bg-blue-500' },
+    { id: 'contagem', name: 'Contagem', color: 'bg-green-500' },
+    { id: 'betim', name: 'Betim', color: 'bg-purple-500' },
+    { id: 'nova_lima', name: 'Nova Lima', color: 'bg-yellow-500' },
+    { id: 'ribeirao', name: 'Ribeirão das Neves', color: 'bg-red-500' },
+    { id: 'sabara', name: 'Sabará', color: 'bg-pink-500' },
+    { id: 'santa_luzia', name: 'Santa Luzia', color: 'bg-indigo-500' }
+  ];
+
+  const timeRanges = [
+    { id: 'early', name: 'Madrugada (05:00-07:00)', icon: '🌙' },
+    { id: 'morning', name: 'Manhã (07:00-12:00)', icon: '🌅' },
+    { id: 'afternoon', name: 'Tarde (12:00-18:00)', icon: '☀️' },
+    { id: 'evening', name: 'Noite (18:00-22:00)', icon: '🌆' },
+    { id: 'late', name: 'Madrugada (22:00-05:00)', icon: '🌃' }
+  ];
+
+  const lineTypes = [
+    { id: 'regular', name: 'Linhas Regulares', color: 'bg-blue-100 text-blue-800' },
+    { id: 'express', name: 'Linhas Expressas', color: 'bg-red-100 text-red-800' },
+    { id: 'feeder', name: 'Linhas Alimentadoras', color: 'bg-green-100 text-green-800' },
+    { id: 'circular', name: 'Linhas Circulares', color: 'bg-purple-100 text-purple-800' }
+  ];
+
+  const updateFilters = (newFilters: Partial<FilterConfig>) => {
+    const updated = { ...filters, ...newFilters };
+    setFilters(updated);
+    onFiltersChange(updated);
   };
 
-  const handleResetFilters = () => {
-    const resetFilters: FilterState = {
-      timeRange: { start: 0, end: 24 },
-      hasSchedules: false,
-      sortBy: 'name',
-      sortOrder: 'asc',
-      onlyFavorites: false,
-      minRating: 0,
-    };
-    setLocalFilters(resetFilters);
-    onFiltersChange(resetFilters);
-    setOpen(false);
-  };
-
-  const formatTime = (hour: number) => {
-    return `${hour.toString().padStart(2, '0')}:00`;
+  const clearAllFilters = () => {
+    setFilters(defaultFilters);
+    onFiltersChange(defaultFilters);
   };
 
   const hasActiveFilters = () => {
-    return (
-      activeFilters.timeRange.start !== 0 ||
-      activeFilters.timeRange.end !== 24 ||
-      activeFilters.hasSchedules ||
-      activeFilters.sortBy !== 'name' ||
-      activeFilters.sortOrder !== 'asc' ||
-      activeFilters.onlyFavorites ||
-      activeFilters.minRating > 0
-    );
+    return filters.regions.length > 0 || 
+           filters.timeRanges.length > 0 || 
+           filters.lineTypes.length > 0 || 
+           filters.hasSchedules !== null ||
+           filters.sortBy !== 'line_number';
+  };
+
+  const activeFilterCount = () => {
+    let count = 0;
+    if (filters.regions.length > 0) count += filters.regions.length;
+    if (filters.timeRanges.length > 0) count += filters.timeRanges.length;
+    if (filters.lineTypes.length > 0) count += filters.lineTypes.length;
+    if (filters.hasSchedules !== null) count += 1;
+    if (filters.sortBy !== 'line_number') count += 1;
+    return count;
+  };
+
+  const toggleArrayFilter = (filterKey: keyof FilterConfig, value: string) => {
+    const currentArray = filters[filterKey] as string[];
+    const newArray = currentArray.includes(value)
+      ? currentArray.filter(item => item !== value)
+      : [...currentArray, value];
+    
+    updateFilters({ [filterKey]: newArray });
   };
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-2 relative">
-          <Filter className="h-4 w-4" />
-          Filtros
-          {hasActiveFilters() && (
-            <div className="w-2 h-2 bg-primary rounded-full absolute -top-1 -right-1" />
-          )}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-80">
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h4 className="font-medium">Filtros Avançados</h4>
-            <Button variant="ghost" size="sm" onClick={handleResetFilters}>
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
+    <div className="relative">
+      {/* Filter Toggle Button */}
+      <Button
+        variant="outline"
+        onClick={() => setIsOpen(!isOpen)}
+        className="relative"
+      >
+        <Filter className="w-4 h-4 mr-2" />
+        Filtros Avançados
+        {hasActiveFilters() && (
+          <Badge 
+            variant="destructive" 
+            className="absolute -top-2 -right-2 w-5 h-5 p-0 flex items-center justify-center text-xs"
+          >
+            {activeFilterCount()}
+          </Badge>
+        )}
+      </Button>
 
-          {/* Time Range */}
-          <div className="space-y-2">
-            <Label>Horário ({formatTime(localFilters.timeRange.start)} - {formatTime(localFilters.timeRange.end)})</Label>
-            <Slider
-              value={[localFilters.timeRange.start, localFilters.timeRange.end]}
-              onValueChange={([start, end]) =>
-                setLocalFilters(prev => ({
-                  ...prev,
-                  timeRange: { start, end }
-                }))
-              }
-              max={24}
-              min={0}
-              step={1}
-              className="w-full"
-            />
-          </div>
-
-          {/* Sort Options */}
-          <div className="space-y-2">
-            <Label>Ordenar por</Label>
-            <div className="flex gap-2">
-              <Select
-                value={localFilters.sortBy}
-                onValueChange={(value: 'name' | 'updated' | 'schedule_count') =>
-                  setLocalFilters(prev => ({ ...prev, sortBy: value }))
-                }
+      {/* Filter Panel */}
+      {isOpen && (
+        <Card className="absolute top-12 left-0 w-96 z-50 shadow-lg">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Filter className="w-5 h-5" />
+                Filtros Avançados
+              </CardTitle>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsOpen(false)}
               >
-                <SelectTrigger className="flex-1">
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+            
+            {/* Clear Filters */}
+            {hasActiveFilters() && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearAllFilters}
+                  className="h-auto p-0 text-red-600 hover:text-red-700"
+                >
+                  Limpar todos os filtros
+                </Button>
+              </div>
+            )}
+          </CardHeader>
+
+          <CardContent className="space-y-6">
+            {/* Sort Options */}
+            <div className="space-y-3">
+              <label className="text-sm font-medium flex items-center gap-2">
+                <Route className="w-4 h-4" />
+                Ordenar por:
+              </label>
+              <Select 
+                value={filters.sortBy} 
+                onValueChange={(value) => updateFilters({ sortBy: value })}
+              >
+                <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="name">Nome</SelectItem>
-                  <SelectItem value="updated">Atualização</SelectItem>
-                  <SelectItem value="schedule_count">Qtd. Horários</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select
-                value={localFilters.sortOrder}
-                onValueChange={(value: 'asc' | 'desc') =>
-                  setLocalFilters(prev => ({ ...prev, sortOrder: value }))
-                }
-              >
-                <SelectTrigger className="w-20">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="asc">↑</SelectItem>
-                  <SelectItem value="desc">↓</SelectItem>
+                  <SelectItem value="line_number">Número da Linha</SelectItem>
+                  <SelectItem value="line_name">Nome da Linha</SelectItem>
+                  <SelectItem value="recent">Mais Recentes</SelectItem>
+                  <SelectItem value="popular">Mais Populares</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-          </div>
 
-          {/* Checkboxes */}
-          <div className="space-y-3">
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="hasSchedules"
-                checked={localFilters.hasSchedules}
-                onCheckedChange={(checked) =>
-                  setLocalFilters(prev => ({ ...prev, hasSchedules: !!checked }))
-                }
-              />
-              <Label htmlFor="hasSchedules">Apenas com horários</Label>
+            <Separator />
+
+            {/* Schedule Filter */}
+            <div className="space-y-3">
+              <label className="text-sm font-medium flex items-center gap-2">
+                <Clock className="w-4 h-4" />
+                Disponibilidade de Horários:
+              </label>
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="has-schedules"
+                    checked={filters.hasSchedules === true}
+                    onCheckedChange={(checked) => 
+                      updateFilters({ hasSchedules: checked ? true : null })
+                    }
+                  />
+                  <label htmlFor="has-schedules" className="text-sm">
+                    Somente com horários detalhados
+                  </label>
+                </div>
+              </div>
             </div>
 
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="onlyFavorites"
-                checked={localFilters.onlyFavorites}
-                onCheckedChange={(checked) =>
-                  setLocalFilters(prev => ({ ...prev, onlyFavorites: !!checked }))
-                }
-              />
-              <Label htmlFor="onlyFavorites">Apenas favoritos</Label>
+            <Separator />
+
+            {/* Region Filter */}
+            <div className="space-y-3">
+              <label className="text-sm font-medium flex items-center gap-2">
+                <MapPin className="w-4 h-4" />
+                Regiões:
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                {regions.map((region) => (
+                  <div key={region.id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={region.id}
+                      checked={filters.regions.includes(region.id)}
+                      onCheckedChange={() => toggleArrayFilter('regions', region.id)}
+                    />
+                    <label htmlFor={region.id} className="text-sm flex items-center gap-1">
+                      <div className={`w-2 h-2 rounded-full ${region.color}`} />
+                      {region.name}
+                    </label>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
 
-          {/* Rating Filter */}
-          <div className="space-y-2">
-            <Label>Avaliação mínima: {localFilters.minRating} {localFilters.minRating > 0 && '⭐'}</Label>
-            <Slider
-              value={[localFilters.minRating]}
-              onValueChange={([value]) =>
-                setLocalFilters(prev => ({ ...prev, minRating: value }))
-              }
-              max={5}
-              min={0}
-              step={0.5}
-              className="w-full"
-            />
-          </div>
+            <Separator />
 
-          <div className="flex gap-2 pt-2">
-            <Button onClick={handleApplyFilters} className="flex-1">
-              Aplicar
-            </Button>
-            <Button variant="outline" onClick={() => setOpen(false)}>
-              Cancelar
-            </Button>
-          </div>
-        </div>
-      </PopoverContent>
-    </Popover>
+            {/* Time Range Filter */}
+            <div className="space-y-3">
+              <label className="text-sm font-medium flex items-center gap-2">
+                <Clock className="w-4 h-4" />
+                Horários de Funcionamento:
+              </label>
+              <div className="space-y-2">
+                {timeRanges.map((range) => (
+                  <div key={range.id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={range.id}
+                      checked={filters.timeRanges.includes(range.id)}
+                      onCheckedChange={() => toggleArrayFilter('timeRanges', range.id)}
+                    />
+                    <label htmlFor={range.id} className="text-sm">
+                      {range.icon} {range.name}
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Line Type Filter */}
+            <div className="space-y-3">
+              <label className="text-sm font-medium">Tipos de Linha:</label>
+              <div className="space-y-2">
+                {lineTypes.map((type) => (
+                  <div key={type.id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={type.id}
+                      checked={filters.lineTypes.includes(type.id)}
+                      onCheckedChange={() => toggleArrayFilter('lineTypes', type.id)}
+                    />
+                    <label htmlFor={type.id} className="text-sm">
+                      <Badge variant="secondary" className={`text-xs ${type.color}`}>
+                        {type.name}
+                      </Badge>
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
   );
 };

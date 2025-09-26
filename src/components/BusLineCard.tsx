@@ -243,15 +243,13 @@ export const BusLineCard = ({ line }: BusLineCardProps) => {
               </Button>
             </RatingDialog>
             
-            <ShareDialog busLine={line}>
-              <Button
-                variant="outline"
-                size="sm"
-                className="text-green-600 hover:text-green-700 hover:bg-green-50"
-              >
-                Compartilhar
-              </Button>
-            </ShareDialog>
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-green-600 hover:text-green-700 hover:bg-green-50"
+            >
+              Compartilhar
+            </Button>
             
             <Button
               variant="outline"
